@@ -1,2 +1,6 @@
-QTR-8RC : 
+Capteur de ligne QTR-8RC : 
     https://www.pololu.com/docs/0J12/5
+
+Controlleur moteurs md18-a :
+    https://www.pololu.com/product/2135
+    https://core-electronics.com.au/drv8835-dual-motor-driver-carrier.html (pour les schémas)
