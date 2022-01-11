@@ -24,8 +24,43 @@
 
 // GPIODA
 
-void init(){
+#define WAIT_PSC 1000
+#define WAIT_DELAY (APB1_CLK / WAIT_PSC)
+#define HALF_PERIOD (WAIT_DELAY/2)
 
+
+// calcul du temps entre de le moment ou la ligne d'un capteur est montee a 1 et le moment ou elle retombe a 0
+// passer la ligne du capteur en outpout avec pull up
+// attendre 10 microseconde pour que la ligne soit a 1
+// passer la ligne en inpout -> la tension de la ligne va diminuer jusqu'a etre nulle 
+// calculer le temps de descente a 0
+
+void init_TIM4(){
+	DISABLE_IRQS;
+
+	NVIC_ICER(TIM4_IRQ >> 5) |= 1 << (TIM4_IRQ & 0X1f);
+	NVIC_IRQ(TIM4_IRQ) = (uint32_t)handle_TIM4;
+	NVIC_IPR(TIM4_IRQ) = 0;
+
+	NVIC_ICPR(TIM4_IRQ >> 5) |= 1 << (TIM4_IRQ & 0X1f);
+	NVIC_ISER(TIM4_IRQ >> 5) |= 1 << (TIM4_IRQ & 0X1f);
+
+	TIM4_CR1 = 0;
+	TIM4_PSC = WAIT_PSC;
+	TIM4_ARR = HALF_PERIOD;
+	TIM4_EGR = TIM_UG;
+	TIM4_SR = 0;
+	TIM4_CR1 = TIM_ARPE;
+	TIM4_SR &= ~TIM_UIF;
+	TIM4_DIER = TIM_UIE;
+
+	ENABLE_IRQS;
+	TIM4_CR1 |= TIM_CEN;
+}
+
+
+void init(){
+    
 	
 
 }
@@ -47,6 +82,7 @@ int main() {
 
 	// initialization
 	init();
+    init_TIM4();
 	// main loop
 	printf("Endless loop!\n");
 	while(1) {
