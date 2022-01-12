@@ -26,9 +26,21 @@
 #define WAIT_DELAY (APB1_CLK / WAIT_PSC)
 #define HALF_PERIOD (WAIT_DELAY/2)
 
+#define SEUIL_BLANC	3
+#define SEUIL_NOIR	7
+
 volatile int un_sur_deux = 0;
 volatile int TIM4_triggered = 0;
-volatile enum{ E0 , E1 , E2 , E3 , E4 , E5 , E6 } state=CHARGE;
+volatile enum{ D0 , R1 , R2 , L1 , L2} state=D0;
+
+#define SEUIL_BLANC	3
+#define SEUIL_NOIR	7
+
+//E0  1278 -> B ; 45 -> N
+//R1  5678 -> B ; 23 -> N
+//R2  4567 -> B ; 12 -> N
+//L1  1234 -> B ; 67 -> N
+//L2  2345 -> B ; 78 -> N
 
 // calcul du temps entre de le moment ou la ligne d'un capteur est montee a 1 et le moment ou elle retombe a 0
 // passer la ligne du capteur en outpout avec pull up
@@ -83,6 +95,27 @@ void init(){
 }
 
 
+void CHARGE()
+{
+	for (short int i=0; i < 8; i++)                              // pin 0 à 7
+	{
+		GPIOD_MODER = SET_BITS(GPIOD_MODER, i*2, 2, 0b01); //set GPIO A ou D
+		GPIOD_OTYPER = GPIOD_OTYPER & ~(1 << i);
+		GPIOD_PUPDR = SET_BITS(GPIOD_PUPDR, i*2, 2, 0b01);
+	}
+}
+
+
+void CAPTURE_START()
+{
+	for (short int i=0; i < 8; i++)                              // pin 0 à 7
+	{
+		GPIOD_MODER = SET_BITS(GPIOD_MODER, i*2, 2, 0b00); //set GPIO A ou D
+		GPIOD_OTYPER = GPIOD_OTYPER & ~(1 << i);
+		GPIOD_PUPDR = SET_BITS(GPIOD_PUPDR, i*2, 2, 0b01);
+	}
+}
+
 
 int main() {
 	printf("\nStarting...\n");
@@ -98,39 +131,55 @@ int main() {
     init_TIM4();
 	// main loop
 	printf("Endless loop!\n");
-    int x=0;
-    int vc1, vc2, vc3, vc4, vc5, vc6, vc7, vc8;
+    short int x=0;
+    CHARGE();
+    short int vc[8] = { 12 , 12 , 12 , 12 , 12 , 12 , 12 , 12 };
 	while(1) {
         if(TIM4_triggered){
 			TIM4_triggered = 0;
 			switch(state){
-			case E0 :
-
-                if (x == 10)
+			case D0 :
+				
+				for (int i=0; i < 8; i++)                              // pin 0 à 7
+				{
+					if((vc[i] > x) & ((GPIOD_IDR & (1 << i ))!= 0))
+					{
+						vc[i] = x;
+					}
+				}
+                if (x == 11)
                 {
-                    x=0;
-
+                    x = 0;
+                    CHARGE();
+                    if( vc[4] < SEUIL_BLANC)
+                    {
+                    	print("trop à droite\n");
+                    }
+                    if( vc[5] < SEUIL_BLANC)
+                    {
+                    	print("trop à gauche\n");
+                    }		
+                }
+                else
+                {
+                	if (x == 1)
+                	{
+                		CAPTURE_START();
+                		vc =  { 12 , 12 , 12 , 12 , 12 , 12 , 12 , 12 };
+                	}
+                	x = x + 1;
                 }
 				break;
 			
-			/*case E1 :
-
+			/*case R1 :
 				break;
-
-			case E2 :
-
+			case R2 :
 				break;
-
-			case E3 :
-
+			case L1 :
 				break;
-
-			case E4 :
-
+			case L2 :
 				break;
-
 			case E5 :
-
 				break;*/
 		}
 	}__asm("nop");
