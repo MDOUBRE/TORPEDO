@@ -3,8 +3,9 @@
 STLINK_ROOT=stlink-1.5.1/build/Release
 
 # sources
-SOURCES = $(wildcard ex*.c)
-PROGRAMS = $(SOURCES:.c=.elf)
+PROGRAMS = \
+	moteurs.elf
+
 OBJECTS = $(SOURCES:.c=.o)
 
 # compiler configuration
@@ -34,8 +35,7 @@ $(APP).elf: $(OBJECTS)
 	$(CC) $(CFLAGS) $(OBJECTS) -o $@ $(LDFLAGS)
 
 clean:
-	rm -f *.o $(PROGRAMS) $(OBJECTS)
+	rm -f *.o $(PROGRAMS)
 
-ex%.elf: startup.o ex%.o tinyprintf.o
+moteurs.elf: startup.o moteurs.o tinyprintf.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
-

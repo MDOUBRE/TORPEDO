@@ -3,7 +3,7 @@
 APP = main
 STLINK_ROOT=stlink-1.5.1/build/Release
 LOG = stm32f4.log
-GDB = gdb-multiarch
+#GDB = gdb-multiarch
 GDB = gdb
 GDB_FLAGS=-command ../scripts/gdbinit
 
@@ -34,7 +34,6 @@ debug_moteurs: moteurs
 	cd src; $(GDB) $(GDB_FLAGS) moteurs.elf
 
 
-
 # build distribution
 DIST_FILES = \
 	COPYING.md \
@@ -42,13 +41,11 @@ DIST_FILES = \
 	include \
 	scripts \
 	Makefile
-DIST_SRC2 = \
-	src/moteurs.c
 DIST_SRC = \
 	src/Makefile \
 	src/startup.c \
 	src/tinyprintf.c \
-	$(DIST_SRC3)
+	src/moteurs.c
 DIST_NAME=code
 
 dist:

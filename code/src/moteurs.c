@@ -25,7 +25,7 @@
 #define KI_M2
 #define KD_M2
 
-init_moteurs(){
+void init_moteurs(){
     // init des deux pins pour le moteur 1
     GPIOB_MODER = SET_BITS(GPIOB_MODER, 2*M1P1, 2, 0b10);
     GPIOB_AFRL = SET_BITS(GPIOB_AFRL, 4*M1P1, 4, 2);
@@ -45,8 +45,8 @@ init_moteurs(){
 	GPIOB_OTYPER &= ~(1 << MODE);
 	GPIOB_PUPDR = SET_BITS(GPIOB_PUPDR, 2*MODE, 2, 0b01);
 
-    GPIOB_BSRR = 1 << M1P2;
-    GPIOB_BSRR = 1 << M2P2;
+    //GPIOB_BSRR = 1 << M1P2;
+    //GPIOB_BSRR = 1 << M2P2;
     GPIOB_BSRR = 1 << MODE;
 }
 
@@ -55,50 +55,57 @@ void init_TIM3() {
 	TIM3_CCR1 = 0;
 	TIM3_ARR = TIM3_PERIOD;
 	TIM3_PSC = TIM3_DIV - 1;
-	TIM3_CCMR1 = TIM_OC1S_OUT | TIM_OC1M_PWM1
-			   | TIM_OC2S_OUT | TIM_OC2M_PWM1;
+	TIM3_CCMR1 = TIM_CCS1S_OUT | TIM_OC1M_PWM1
+			   | TIM_CCS2S_OUT | TIM_OC2M_PWM1;
 	TIM3_CCER = TIM_CC1E | TIM_CC2E;
-	TIM3_CC1R = 0;
-	TIM3_CC2R = 0;
-	TIM3_CCR1 = TIM_CEN | CIM_ARPE;
+	TIM3_CCR1 = 0;
+	TIM3_CCR2 = 0;
+	TIM3_CCR1 = TIM_CEN | TIM_ARPE;
 }
 
 void start_M1() {
-	TIM3_CC1R = TIM3_PERIOD;
+	TIM3_CCR1 = TIM3_PERIOD;
+    GPIOB_BSRR = (1 << M1P2);
 }
 
 void stop_M1() {
-	TIM3_CC1R = 0;
+	TIM3_CCR1 = 0;
+    GPIOB_BSRR = 1 << (M1P2);
 }
 
 void start_M2() {
-	TIM3_CC2R = PUMP_PERIOD;
+	TIM3_CCR2 = TIM3_PERIOD;
 }
 
 void stop_M2() {
-	TIM3_CC2R = 0;
+	TIM3_CCR2 = 0;
 }
 
 void set_M1(int n) {
-	TIM3_CC1R = n * TIM3_PERIOD / 100;
+	TIM3_CCR1 = n * TIM3_PERIOD / 100;
+    GPIOB_BSRR = (1 << M1P2);
 }
 
 void set_M2(int n) {
-	TIM3_CC2R = n * TIM3_PERIOD / 100;
+	TIM3_CCR2 = n * TIM3_PERIOD / 100;
 }
 
 int main(){
     init_moteurs();
     init_TIM3();
+    printf("les inits sont fait\n");
 
+    stop_M1();
+    printf("on a stop les moteurs normalement...\n");
+    /*
     set_M1(20);
-    for(int i = 0;i<30000000;i++)__asm("nop");
+    for(int i = 0;i<30000000000000;i++)__asm("nop");
     set_M1(50);
-    for(int i = 0;i<30000000;i++)__asm("nop");
+    for(int i = 0;i<30000000000000;i++)__asm("nop");
     set_M1(80);
-    for(int i = 0;i<30000000;i++)__asm("nop");
+    for(int i = 0;i<30000000000000;i++)__asm("nop");
     stop_M1();  
-
+    */
     while(1){
 
     }__asm("nop");

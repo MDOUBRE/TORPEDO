@@ -27,35 +27,11 @@ log:
 
 
 # exercises
-ex1:
-	cd src; $(MAKE) ex1.elf
+moteurs:
+	cd src; $(MAKE) moteurs.elf
 
-ex2:
-	cd src; $(MAKE) ex2.elf
-
-ex3:
-	cd src; $(MAKE) ex3.elf
-
-ex4:
-	cd src; $(MAKE) ex4.elf
-
-ex5:
-	cd src; $(MAKE) ex5.elf
-
-debug_ex1: ex1
-	cd src; $(GDB) $(GDB_FLAGS) ex1.elf
-
-debug_ex2: ex2
-	cd src; $(GDB) $(GDB_FLAGS) ex2.elf
-
-debug_ex3: ex3
-	cd src; $(GDB) $(GDB_FLAGS) ex3.elf
-
-debug_ex4: ex4
-	cd src; $(GDB) $(GDB_FLAGS) ex4.elf
-
-debug_ex5: ex5
-	cd src; $(GDB) $(GDB_FLAGS) ex5.elf
+debug_moteurs: moteurs
+	cd src; $(GDB) $(GDB_FLAGS) moteurs.elf
 
 
 # build distribution
@@ -68,8 +44,8 @@ DIST_SRC = \
 	src/Makefile \
 	src/startup.c \
 	src/tinyprintf.c \
-	src/ex?.c
-DIST_NAME=labwork1
+	src/moteurs.c
+DIST_NAME=code
 
 dist:
 	if [ -e $(DIST_NAME) ]; then \
