@@ -142,7 +142,7 @@ int main() {
 			    
 				for (int i=0; i < 8; i++)                              
 				{
-					if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))!= 0))
+					if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))== 0))
 					{
 						vc[i] = x;
 					}
@@ -185,7 +185,7 @@ int main() {
 			    //ralentir la roue gauche légèrement
 			    for (int i=0; i < 8; i++)                              
 				{
-					if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))!= 0))
+					if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))== 0))
 					{
 						vc[i] = x;
 					}
@@ -233,7 +233,7 @@ int main() {
 			    //accélérer la roue droite légèrement si possible
 			    for (int i=0; i < 8; i++)                              
 				{
-					if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))!= 0))
+					if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))== 0))
 					{
 						vc[i] = x;
 					}
@@ -276,7 +276,7 @@ int main() {
 			    //accélérer la roue droite fortement si possible
 			    for (int i=0; i < 8; i++)                              
 				{
-					if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))!= 0))
+					if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))== 0))
 					{
 						vc[i] = x;
 					}
@@ -319,7 +319,7 @@ int main() {
 			    //ralentir la roue droite légèrement			
                 for (int i=0; i < 8; i++)                              
 				{
-					if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))!= 0))
+					if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))== 0))
 					{
 						vc[i] = x;
 					}
@@ -367,7 +367,7 @@ int main() {
 			    //accélérer la roue gauche légèrement si possible
 			    for (int i=0; i < 8; i++)                              
 				{
-					if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))!= 0))
+					if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))== 0))
 					{
 						vc[i] = x;
 					}
@@ -410,7 +410,7 @@ int main() {
 			    //accélérer la roue gauche fortement si possible
 			    for (int i=0; i < 8; i++)                              
 				{
-					if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))!= 0))
+					if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))== 0))
 					{
 						vc[i] = x;
 					}
@@ -450,7 +450,7 @@ int main() {
 				break;
 			case SR :
 			    //sortie de route
-			
+                state = D0;
 				break;
 			}
 		}
