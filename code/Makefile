@@ -33,7 +33,13 @@ moteurs:
 debug_moteurs: moteurs
 	cd src; $(GDB) $(GDB_FLAGS) moteurs.elf
 
+suivi_de_ligne:
+	cd src; $(MAKE) suivi_de_ligne.elf
 
+debug_suivi_de_ligne: suivi_de_ligne
+	cd src; $(GDB) $(GDB_FLAGS) suivi_de_ligne.elf
+	
+	
 # build distribution
 DIST_FILES = \
 	COPYING.md \
@@ -45,7 +51,9 @@ DIST_SRC = \
 	src/Makefile \
 	src/startup.c \
 	src/tinyprintf.c \
-	src/moteurs.c
+	src/moteurs.c \
+	src/suivi_de_ligne.c
+	
 DIST_NAME=code
 
 dist:

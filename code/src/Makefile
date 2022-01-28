@@ -4,7 +4,8 @@ STLINK_ROOT=stlink-1.5.1/build/Release
 
 # sources
 PROGRAMS = \
-	moteurs.elf
+	moteurs.elf\
+	suivi_de_ligne.elf
 
 OBJECTS = $(SOURCES:.c=.o)
 
@@ -38,4 +39,7 @@ clean:
 	rm -f *.o $(PROGRAMS)
 
 moteurs.elf: startup.o moteurs.o tinyprintf.o
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+
+suivi_de_ligne.elf: startup.o suivi_de_ligne.o tinyprintf.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)

@@ -33,9 +33,6 @@ volatile int un_sur_deux = 0;
 volatile int TIM4_triggered = 0;
 volatile enum{ D0 , R1 , R2 , R3 , L1 , L2 , L3 , SR} state=D0;
 
-#define SEUIL_BLANC	3
-#define SEUIL_NOIR	7
-
 //E0  1278 -> B ; 45 -> N
 //R1  5678 -> B ; 23 -> N
 //R2  4567 -> B ; 12 -> N
@@ -153,6 +150,7 @@ int main() {
                 if (x == 11)
                 {
                     x = 0;
+					printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",vc[0],vc[1],vc[2],vc[3],vc[4],vc[5],vc[6],vc[7]);
                     CHARGE();
                     if( vc[3] < SEUIL_NOIR)
                     {
@@ -195,6 +193,7 @@ int main() {
                 if (x == 11)
                 {
                     x = 0;
+					printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",vc[0],vc[1],vc[2],vc[3],vc[4],vc[5],vc[6],vc[7]);
                     CHARGE();
                     if( vc[3] < SEUIL_BLANC)
                     {
@@ -242,6 +241,7 @@ int main() {
                 if (x == 11)
                 {
                     x = 0;
+					printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",vc[0],vc[1],vc[2],vc[3],vc[4],vc[5],vc[6],vc[7]);
                     CHARGE();
                     if( vc[3] > SEUIL_BLANC)
                     {
@@ -285,6 +285,7 @@ int main() {
                 {
                     x = 0;
                     CHARGE();
+					printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",vc[0],vc[1],vc[2],vc[3],vc[4],vc[5],vc[6],vc[7]);
                     if( vc[0] > SEUIL_BLANC && vc[1] > SEUIL_BLANC )
                     {
                     	state = SR;
@@ -326,6 +327,7 @@ int main() {
                 if (x == 11)
                 {
                     x = 0;
+					printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",vc[0],vc[1],vc[2],vc[3],vc[4],vc[5],vc[6],vc[7]);
                     CHARGE();
                     if( vc[4] < SEUIL_BLANC)
                     {
@@ -373,6 +375,7 @@ int main() {
                 if (x == 11)
                 {
                     x = 0;
+					printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",vc[0],vc[1],vc[2],vc[3],vc[4],vc[5],vc[6],vc[7]);
                     CHARGE();
                     if( vc[4] > SEUIL_BLANC)
                     {
@@ -415,6 +418,7 @@ int main() {
                 if (x == 11)
                 {
                     x = 0;
+					printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",vc[0],vc[1],vc[2],vc[3],vc[4],vc[5],vc[6],vc[7]);
                     CHARGE();
                     if( vc[7] > SEUIL_BLANC && vc[6] > SEUIL_BLANC )
                     {
@@ -448,6 +452,7 @@ int main() {
 			    //sortie de route
 			
 				break;
+			}
 		}
 	}__asm("nop");
 
