@@ -22,9 +22,9 @@
 
 // GPIODA
 
-#define WAIT_PSC 100
+#define WAIT_PSC 7
 #define WAIT_DELAY (APB1_CLK / WAIT_PSC)
-#define HALF_PERIOD (WAIT_DELAY/2)
+#define HALF_PERIOD 60000
 
 #define SEUIL_BLANC	4
 #define SEUIL_NOIR	8
@@ -37,6 +37,14 @@ int sens_MG = 0; //[0,1] sens moteur gauche
 volatile int un_sur_deux = 0;
 volatile int TIM4_triggered = 0;
 volatile enum{ D0 , R1 , R2 , R3 , L1 , L2 , L3 , SR , CLR , CLL , CT , CTR , CTL , CX} state = D0;
+volatile int vitesse_m1 = 30;
+volatile int vitesse_m2 = 30;
+int KP = 3; //Constante Proportionnelle
+volatile int P = 0 ; // Error
+int KI = 0; //Constante Integrale
+volatile float I = 0; //I = I + error (P)
+volatile int KD = 0; //Constante Derivée
+float D = 0; //D= error - previousError 
 
 //E0  1278 -> B ; 45 -> N
 //R1  5678 -> B ; 23 -> N
@@ -99,23 +107,41 @@ void init(){
 
 void CHARGE()
 {
-	for (short int i=0; i < 8; i++)                              // pin 0 à 7
+	for (short int i=0; i < 4; i++)                              // pin 0 à 7
 	{
 		GPIOA_MODER = SET_BITS(GPIOA_MODER, i*2, 2, 0b01); //set GPIO A ou D
 		GPIOA_OTYPER = GPIOA_OTYPER & ~(1 << i);
 		GPIOA_PUPDR = SET_BITS(GPIOA_PUPDR, i*2, 2, 0b01);
+
+		GPIOD_MODER = SET_BITS(GPIOD_MODER, i*2, 2, 0b01); //set GPIO A ou D
+		GPIOD_OTYPER = GPIOD_OTYPER & ~(1 << i);
+		GPIOD_PUPDR = SET_BITS(GPIOD_PUPDR, i*2, 2, 0b01);
 	}
 }
 
 
 void CAPTURE_START()
 {
-	for (short int i=0; i < 8; i++)                              // pin 0 à 7
+	for (short int i=0; i < 4; i++)                              // pin 0 à 7
 	{
 		GPIOA_MODER = SET_BITS(GPIOA_MODER, i*2, 2, 0b00); //set GPIO A ou D
 		GPIOA_OTYPER = GPIOA_OTYPER & ~(1 << i);
 		GPIOA_PUPDR = SET_BITS(GPIOA_PUPDR, i*2, 2, 0b01);
+
+		GPIOD_MODER = SET_BITS(GPIOD_MODER, i*2, 2, 0b00); //set GPIO A ou D
+		GPIOD_OTYPER = GPIOD_OTYPER & ~(1 << i);
+		GPIOD_PUPDR = SET_BITS(GPIOD_PUPDR, i*2, 2, 0b01);
 	}
+	
+}
+
+void VITESSE_PID()
+{
+	printf("In PID\n");
+	vitesse_m1 = vitesse_m1 -P;
+	vitesse_m2 = vitesse_m2 +P;
+	
+	printf("Vitesse M1: %d, Vitesse M2 %d\n", vitesse_m1, vitesse_m2);
 }
 
 
@@ -146,11 +172,15 @@ int main() {
 			   // mettre les roues à la même vitesse
 			   //accélérer les roues jusqu'à atteindre la vitesse max 
 			    
-				for (int i=0; i < 8; i++)                              
+				for (int i=0; i < 4; i++)                              
 				{
 					if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))== 0))
 					{
 						vc[i] = x;
+					}
+					if((vc[i+4] > x) & ((GPIOD_IDR & (1 << i ))== 0))
+					{
+						vc[i+4] = x;
 					}
 				}
                 if (x == 11)
@@ -158,6 +188,22 @@ int main() {
                     x = 0;
 					printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",vc[0],vc[1],vc[2],vc[3],vc[4],vc[5],vc[6],vc[7]);
                     CHARGE();
+
+					if (vc[3] > SEUIL_NOIR & vc[4]< SEUIL_BLANC){
+						P= -1;
+					}else if (vc[4] > SEUIL_NOIR & vc[3]< SEUIL_BLANC){
+						P= 1;
+					}else if (vc[4] > SEUIL_NOIR & vc[5]> SEUIL_NOIR){
+						P= 2;
+					}else if (vc[3] > SEUIL_NOIR & vc[2]> SEUIL_NOIR){
+						P = -2;
+					}
+					VITESSE_PID();
+
+
+
+
+					/*
                     if( vc[4] < SEUIL_NOIR)
                     {
                     	state = R1;
@@ -205,7 +251,7 @@ int main() {
 						printf("CT\n");
 					}
 
-
+					*/
 
 					//passage à R2 R3 L2 L3	SR CLR CLL CT CTR CTL CX
 
@@ -505,7 +551,7 @@ int main() {
 			    //sortie de route
                 state = D0;								//TODO
 				break;
-			}
+			
 			//cas CLR: le véhicule détecte un croisement en L menant à droite
 			case CLR :
 			    //ralentir jusqu'à arret
@@ -516,7 +562,7 @@ int main() {
 						printf("CT\n");
 					}
 
-				if(vc[7] < SEUIL_BLANC && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC)))
+				if(vc[7] < SEUIL_BLANC && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC))
 				{
 					state = CTR;
 					printf("CTR\n");
@@ -526,7 +572,7 @@ int main() {
 					//interrogez mémoire sur direction à prendre
 				}
 				break;
-			}
+			
 			//cas CLL: le véhicule détecte un croisement en L menant à gauche
 			case CLL :
 			    //ralentir jusqu'à arret
@@ -537,7 +583,7 @@ int main() {
 						printf("CT\n");
 					}
 
-				if(vc[0] < SEUIL_BLANC && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC)))
+				if(vc[0] < SEUIL_BLANC && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC))
 				{
 					state = CTR;
 					printf("CTR\n");
@@ -547,11 +593,11 @@ int main() {
 					//interrogez mémoire sur direction à prendre
 				}
 				break;
-			}
+			
 			//cas CT: le véhicule détecte un croisement en T menant à gauche et à droite
 			case CT :
 			    //ralentir jusqu'à arret
-				if(vc[7] < SEUIL_BLANC && vc[0] < SEUIL_BLANC && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC)))
+				if(vc[7] < SEUIL_BLANC && vc[0] < SEUIL_BLANC && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC))
 				{
 					state = CX;
 					printf("CX\n");
@@ -561,7 +607,7 @@ int main() {
 					//interrogez mémoire sur direction à prendre
 				}
 				break;
-			}
+			
 			//cas CTR: le véhicule détecte un croisement en T menant en face et à droite
 			case CTR :
 			    //ralentir jusqu'à arret
@@ -570,7 +616,7 @@ int main() {
 					//interrogez mémoire sur direction à prendre
 				}
 				break;
-			}
+			
 			//cas CTL: le véhicule détecte un croisement en T menant en face et à gauche
 			case CTL :
 			    //ralentir jusqu'à arret
@@ -579,7 +625,7 @@ int main() {
 					//interrogez mémoire sur direction à prendre
 				}
 				break;
-			}
+			
 			//cas CX: le véhicule détecte un croisement en X 
 			case CX :
 			    //ralentir jusqu'à arret
