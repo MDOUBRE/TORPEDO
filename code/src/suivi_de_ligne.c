@@ -53,14 +53,14 @@ int sens_MG = 0; //[0,1] sens moteur gauche
 volatile int un_sur_deux = 0;
 volatile int TIM4_triggered = 0;
 volatile enum{ D0 , R1 , R2 , R3 , L1 , L2 , L3 , SR , CLR , CLL , CT , CTR , CTL , CX} state = D0;
-volatile int vitesse_m1 = 30;
-volatile int vitesse_m2 = 30;
-int KP = 3; //Constante Proportionnelle
+volatile int KP = 3; //Constante Proportionnelle
 volatile int P = 0 ; // Error
-int KI = 0; //Constante Integrale
-volatile float I = 0; //I = I + error (P)
-volatile int KD = 0; //Constante Derivée
-float D = 0; //D= error - previousError 
+volatile int KI = 1; //Constante Integrale
+volatile int I = 0; //I = I + error (P)
+volatile int KD = 3; //Constante Derivée
+volatile int D = 0; //D= error - previousError 
+volatile int PAvant = 0; // Previous error
+volatile int PID = 0;
 
 //E0  1278 -> B ; 45 -> N
 //R1  5678 -> B ; 23 -> N
@@ -74,7 +74,59 @@ float D = 0; //D= error - previousError
 // passer la ligne en inpout -> la tension de la ligne va diminuer jusqu'a etre nulle 
 // calculer le temps de descente a 0
 
+int stringCompare(char * first, char * second){
+	for (int i = 0; i < 8; i++) {
+		if(first[i]!=second[i]){
+			return 0;
+		}
+	}
+	return 1;
+}
 
+int get_error(short int * array){
+	char string[8];
+	for (short int i =0 ; i < 8; i++){
+		if (array[i]< 6){
+			string[i] = '0';
+		}else{
+			string[i] = '1';
+		}
+	}
+	if (stringCompare(string,"00011000")){
+		return 0;
+	}else if(stringCompare(string,"00001000")){
+		return 1;
+	}else if(stringCompare(string,"00001100")){
+		return 2;
+	}else if(stringCompare(string,"00000100")){
+		return 3;
+	}else if(stringCompare(string,"00000110")){
+		return 4;
+	}else if(stringCompare(string,"00000010")){
+		return 5;
+	}else if(stringCompare(string,"00000011")){
+		return 6;
+	}else if(stringCompare(string,"00000001")){
+		return 7;
+	}else if(stringCompare(string,"00010000")){
+		return -1;
+	}else if(stringCompare(string,"00110000")){
+		return -2;
+	}else if(stringCompare(string,"00100000")){
+		return -3;
+	}else if(stringCompare(string,"01100000")){
+		return -4;
+	}else if(stringCompare(string,"01000000")){
+		return -5;
+	}else if(stringCompare(string,"11000000")){
+		return -6;
+	}else if(stringCompare(string,"10000000")){
+		return -7;
+	}else{
+		return 0;
+	}
+	
+}
 
 void handle_TIM4() {
 	TIM4_ARR = HALF_PERIOD;
@@ -242,10 +294,12 @@ void inverseMG(){
 void VITESSE_PID()
 {
 	printf("In PID\n");
-	vitesse_m1 = vitesse_m1 -P;
-	vitesse_m2 = vitesse_m2 +P;
+	puiss_MD = 35 -PID;
+	puiss_MG = 30 +PID;
+	set_MD(puiss_MD);
+	set_MG(puiss_MG);
 	
-	printf("Vitesse M1: %d, Vitesse M2 %d\n", vitesse_m1, vitesse_m2);
+	printf("Vitesse M1: %d, Vitesse M2 %d\n", puiss_MD, puiss_MG);
 }
 
 
@@ -313,7 +367,7 @@ int main() {
 				}
                 if (x == 11)
                 {
-					if(puiss_MD != puiss_MG)
+					/*if(puiss_MD != puiss_MG)
 					{
 						if(puiss_MD < puiss_MG)
 						{
@@ -332,27 +386,25 @@ int main() {
 							set_MD(puiss_MD + 1);
 						}
 					}
+					*/
 
                     x = 0;
 					printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",vc[0],vc[1],vc[2],vc[3],vc[4],vc[5],vc[6],vc[7]);
                     CHARGE();
 
-					if (vc[3] > SEUIL_NOIR && vc[4]< SEUIL_BLANC){
-						P= -1;
-					}else if (vc[4] > SEUIL_NOIR && vc[3]< SEUIL_BLANC){
-						P= 1;
-					}else if (vc[4] > SEUIL_NOIR && vc[5]> SEUIL_NOIR){
-						P= 2;
-					}else if (vc[3] > SEUIL_NOIR && vc[2]> SEUIL_NOIR){
-						P = -2;
-					}
-					//VITESSE_PID();
+					P = get_error(vc);
+					I = I + P;
+					D = P - PAvant;
+					PID = (KP*P) + (KI *I) + (KD*D);
+					PAvant = P;
+					printf("P: %d, result get_error: %d\n",P,get_error(vc));
+					VITESSE_PID();
 
 
 
 
 					
-                    if( vc[4] < SEUIL_NOIR)
+                    /*if( vc[4] < SEUIL_NOIR)
                     {
                     	state = R1;
                     	printf("R1\n");
@@ -381,7 +433,7 @@ int main() {
 						}
 					}
 
-					/*if(vc[7] > SEUIL_NOIR && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC))
+					if(vc[7] > SEUIL_NOIR && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC))
 					{
 						state = CLR;
 						printf("CR\n");
