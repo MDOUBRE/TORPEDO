@@ -117,36 +117,15 @@ void set_M2(int pulse) {
 }
 
 void inverseM2(){
-    if(GPIOB_ODR & (1<<MD2)){
-        GPIOB_BSRR = 1 << (MD2 + 16);
+    if(GPIOB_ODR & (1<<MG2)){
+        GPIOB_BSRR = 1 << (MG2 + 16);
     }
     else{
-        GPIOB_BSRR = 1 << MD2;
+        GPIOB_BSRR = 1 << MG2;
     }
 }
 
-int main(){
-    RCC_AHB1ENR |= RCC_GPIOBEN;
-	RCC_AHB1ENR |= RCC_GPIODEN;
-	RCC_APB1ENR |= RCC_TIM3EN;
-
-    init_moteurs();
-    init_TIM3();
-        
-    if(GPIOB_ODR & (1<<MD2)){
-        sens_MD = 0;
-    }
-    else{
-        sens_MD = 1;
-    }
-    if(GPIOB_ODR & (1<<MD2)){
-        sens_MD = 0;
-    }
-    else{
-        sens_MD = 1;
-    }
-    printf("les inits sont fait\n");
-    
+void test_moteurs(){
     for(int i = 0;i<90000000;i++)__asm("nop");
     printf("MD à 20\n");
     set_M1(30);    
@@ -175,21 +154,115 @@ int main(){
 
     for(int i = 0;i<90000000;i++)__asm("nop");
     set_M1(30);
-    set_M2(30);
+    set_M2(32);
     for(int i = 0;i<90000000;i++)__asm("nop");
     set_M1(50);
-    set_M2(50);
+    set_M2(54);
+    /*
     for(int i = 0;i<90000000;i++)__asm("nop");
     set_M1(80);
     set_M2(80);
     for(int i = 0;i<90000000;i++)__asm("nop");
     set_M1(100);
     set_M2(100);
+    */
     for(int i = 0;i<90000000;i++)__asm("nop");
     stop_M1();
     stop_M2();
 
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    inverseM2();
+    set_M1(50);
+    set_M2(50);
 
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    stop_M1();
+    stop_M2();
+
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    inverseM1();
+    inverseM2();
+    set_M1(50);
+    set_M2(50);
+
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    stop_M1();
+    stop_M2();
+
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    inverseM1();
+    set_M1(30);
+    set_M2(30);
+
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    stop_M1();
+    stop_M2();
+
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    inverseM1();
+    inverseM2();
+    set_M1(30);
+    set_M2(30);
+
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    inverseM1();
+    inverseM2();
+    set_M1(30);
+    set_M2(30);
+
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    stop_M1();
+    stop_M2();
+}
+
+int main(){
+    RCC_AHB1ENR |= RCC_GPIOBEN;
+	RCC_AHB1ENR |= RCC_GPIODEN;
+	RCC_APB1ENR |= RCC_TIM3EN;
+
+    init_moteurs();
+    init_TIM3();
+        
+    if(GPIOB_ODR & (1<<MD2)){
+        sens_MD = 0;
+    }
+    else{
+        sens_MD = 1;
+    }
+    if(GPIOB_ODR & (1<<MD2)){
+        sens_MD = 0;
+    }
+    else{
+        sens_MD = 1;
+    }
+    //²printf("les inits sont fait\n");
+    
+    test_moteurs();
+    /*
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    set_M2(30);
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    stop_M2();
+    inverseM2();
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    set_M2(30);
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    stop_M2();
+
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    set_M1(30);
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    stop_M1();
+    inverseM1();
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    set_M1(30);
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    stop_M1();
+    
+    set_M1(30);
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    stop_M1();
+    */
     while(1){
 
     }__asm("nop");
