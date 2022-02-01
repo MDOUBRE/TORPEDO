@@ -202,6 +202,7 @@ void set_MD(int pulse) {
 
 	puiss_MD = pulse;
     TIM3_CCR1 = (pulse * TIM3_ARR / 100);
+	//TIM3_CCR1 = 0;
 }
 
 void inverseMD(){
@@ -226,6 +227,7 @@ void set_MG(int pulse) {
 
 	puiss_MG = pulse;
 	TIM3_CCR2 = (pulse * TIM3_ARR / 100);
+	//TIM3_CCR2 = 0;
 }
 
 void inverseMG(){
@@ -284,6 +286,8 @@ int main() {
     short int x=0;
     CHARGE();
     short int vc[8] = { 12 , 12 , 12 , 12 , 12 , 12 , 12 , 12 };
+	set_MG(30);
+	set_MD(30);
 	while(1) {
         if(TIM4_triggered){
 			TIM4_triggered = 0;
