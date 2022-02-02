@@ -22,9 +22,9 @@
 
 // GPIODA
 
-#define WAIT_PSC 7
+#define WAIT_PSC 4  //T * 42MHz / 2¹⁶
 #define WAIT_DELAY (APB1_CLK / WAIT_PSC)
-#define HALF_PERIOD 60000
+#define HALF_PERIOD 52500
 
 #define SEUIL_BLANC	4
 #define SEUIL_NOIR	8
@@ -53,11 +53,11 @@ int sens_MG = 0; //[0,1] sens moteur gauche
 volatile int un_sur_deux = 0;
 volatile int TIM4_triggered = 0;
 volatile enum{ D0 , R1 , R2 , R3 , L1 , L2 , L3 , SR , CLR , CLL , CT , CTR , CTL , CX} state = D0;
-volatile int KP = 3; //Constante Proportionnelle
+volatile int KP = 144; //Constante Proportionnelle
 volatile int P = 0 ; // Error
 volatile int KI = 1; //Constante Integrale
 volatile int I = 0; //I = I + error (P)
-volatile int KD = 3; //Constante Derivée
+volatile int KD = 108; //Constante Derivée
 volatile int D = 0; //D= error - previousError 
 volatile int PAvant = 0; // Previous error
 volatile int PID = 0;
@@ -253,7 +253,7 @@ void stop_MD() {
 void set_MD(int pulse) {
 
 	puiss_MD = pulse;
-    TIM3_CCR1 = (pulse * TIM3_ARR / 100);
+    TIM3_CCR1 =pulse;
 	//TIM3_CCR1 = 0;
 }
 
@@ -278,7 +278,7 @@ void stop_MG() {
 void set_MG(int pulse) {
 
 	puiss_MG = pulse;
-	TIM3_CCR2 = (pulse * TIM3_ARR / 100);
+	TIM3_CCR2 = pulse;//TIM_ARR = 20k, TIM_CCR2 va de 0 a 20k
 	//TIM3_CCR2 = 0;
 }
 
@@ -294,8 +294,11 @@ void inverseMG(){
 void VITESSE_PID()
 {
 	printf("In PID\n");
-	puiss_MD = 35 -PID;
-	puiss_MG = 30 +PID;
+	puiss_MD = 1260 -PID;
+	if (puiss_MD <0){
+		puiss_MD = 0;
+	}
+	puiss_MG = 2340 - puiss_MD;
 	set_MD(puiss_MD);
 	set_MG(puiss_MG);
 	
@@ -387,7 +390,6 @@ int main() {
 						}
 					}
 					*/
-
                     x = 0;
 					printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",vc[0],vc[1],vc[2],vc[3],vc[4],vc[5],vc[6],vc[7]);
                     CHARGE();
@@ -395,7 +397,7 @@ int main() {
 					P = get_error(vc);
 					I = I + P;
 					D = P - PAvant;
-					PID = (KP*P) + (KI *I) + (KD*D);
+					PID = (KP*P) +(KI*I)+ (KD*D);
 					PAvant = P;
 					printf("P: %d, result get_error: %d\n",P,get_error(vc));
 					VITESSE_PID();
