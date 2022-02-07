@@ -126,6 +126,7 @@ void inverseM2(){
 }
 
 void test_moteurs(){
+    /*
     for(int i = 0;i<90000000;i++)__asm("nop");
     printf("MD à 20\n");
     set_M1(30);    
@@ -151,13 +152,14 @@ void test_moteurs(){
     for(int i = 0;i<90000000;i++)__asm("nop");   
     printf("Stop MG\n");   
     stop_M2();
+    */
 
     for(int i = 0;i<90000000;i++)__asm("nop");
-    set_M1(30);
-    set_M2(32);
+    set_M1(38);
+    set_M2(30);
     for(int i = 0;i<90000000;i++)__asm("nop");
-    set_M1(50);
-    set_M2(54);
+    set_M1(60);
+    set_M2(50);
     /*
     for(int i = 0;i<90000000;i++)__asm("nop");
     set_M1(80);
@@ -165,51 +167,52 @@ void test_moteurs(){
     for(int i = 0;i<90000000;i++)__asm("nop");
     set_M1(100);
     set_M2(100);
+    
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    stop_M1();
+    stop_M2();
+
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    inverseM2();
+    set_M1(50);
+    set_M2(50);
+
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    stop_M1();
+    stop_M2();
+
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    inverseM1();
+    inverseM2();
+    set_M1(50);
+    set_M2(50);
+
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    stop_M1();
+    stop_M2();
+
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    inverseM1();
+    set_M1(30);
+    set_M2(30);
+
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    stop_M1();
+    stop_M2();
+
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    inverseM1();
+    inverseM2();
+    set_M1(30);
+    set_M2(30);
+
+    for(int i = 0;i<90000000;i++)__asm("nop");
+    inverseM1();
+    inverseM2();
+    set_M1(30);
+    set_M2(30);
     */
     for(int i = 0;i<90000000;i++)__asm("nop");
-    stop_M1();
-    stop_M2();
-
-    for(int i = 0;i<90000000;i++)__asm("nop");
-    inverseM2();
-    set_M1(50);
-    set_M2(50);
-
-    for(int i = 0;i<90000000;i++)__asm("nop");
-    stop_M1();
-    stop_M2();
-
-    for(int i = 0;i<90000000;i++)__asm("nop");
-    inverseM1();
-    inverseM2();
-    set_M1(50);
-    set_M2(50);
-
-    for(int i = 0;i<90000000;i++)__asm("nop");
-    stop_M1();
-    stop_M2();
-
-    for(int i = 0;i<90000000;i++)__asm("nop");
-    inverseM1();
-    set_M1(30);
-    set_M2(30);
-
-    for(int i = 0;i<90000000;i++)__asm("nop");
-    stop_M1();
-    stop_M2();
-
-    for(int i = 0;i<90000000;i++)__asm("nop");
-    inverseM1();
-    inverseM2();
-    set_M1(30);
-    set_M2(30);
-
-    for(int i = 0;i<90000000;i++)__asm("nop");
-    inverseM1();
-    inverseM2();
-    set_M1(30);
-    set_M2(30);
-
     for(int i = 0;i<90000000;i++)__asm("nop");
     stop_M1();
     stop_M2();
