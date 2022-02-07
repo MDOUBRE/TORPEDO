@@ -38,6 +38,12 @@ suivi_de_ligne:
 
 debug_suivi_de_ligne: suivi_de_ligne
 	cd src; $(GDB) $(GDB_FLAGS) suivi_de_ligne.elf
+
+couleurs:
+	cd src; $(MAKE) couleurs.elf
+
+debug_couleurs: couleurs
+	cd src; $(GDB) $(GDB_FLAGS) couleurs.elf
 	
 	
 # build distribution
@@ -52,7 +58,8 @@ DIST_SRC = \
 	src/startup.c \
 	src/tinyprintf.c \
 	src/moteurs.c \
-	src/suivi_de_ligne.c
+	src/suivi_de_ligne.c\
+	src/couleurs.c
 	
 DIST_NAME=code
 
