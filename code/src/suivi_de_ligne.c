@@ -52,7 +52,7 @@ int sens_MG = 0; //[0,1] sens moteur gauche
 
 volatile int un_sur_deux = 0;
 volatile int TIM4_triggered = 0;
-volatile enum{ D0 , SR , CLR , CLL , CT , CTR , CTL , CX , TL1 , TL2 , TL3 , TR1 , TR2 , TR3} state = D0;
+//volatile enum{ D0 , SR , CLR , CLL , CT , CTR , CTL , CX , TL1 , TL2 , TL3 , TR1 , TR2 , TR3} state = D0;
 volatile int KP = 144; //Constante Proportionnelle
 volatile int P = 0 ; // Error
 volatile int KI = 1; //Constante Integrale
@@ -61,6 +61,8 @@ volatile int KD = 108; //Constante Derivée
 volatile int D = 0; //D= error - previousError 
 volatile int PAvant = 0; // Previous error
 volatile int PID = 0;
+volatile enum{ OUT,LINE,INTERSECTION} etat = OUT;
+volatile enum{ T,LL,LR,X,TL,TR,TR1,TR2,TR3,TL1,TL2,TL3} type = T;
 
 //E0  1278 -> B ; 45 -> N
 //R1  5678 -> B ; 23 -> N
@@ -82,6 +84,23 @@ int stringCompare(char * first, char * second){
 	}
 	return 1;
 }
+int compare_line(short int * array){
+    char string[8];
+	for (short int i =0 ; i < 8; i++){
+		if (array[i]< 6){
+			string[i] = '0';
+		}else{
+			string[i] = '1';
+		}
+	}
+    if (stringCompare(string,"00011000")){
+		return 1;
+	}else{
+        return 0;
+    }
+}
+
+
 
 int get_error(short int * array){
 	char string[8];
@@ -122,9 +141,19 @@ int get_error(short int * array){
 		return -6;
 	}else if(stringCompare(string,"10000000")){
 		return -7;
+	}else if(stringCompare(string,"00000000")) {
+		return 10;
+	}else if(stringCompare(string,"11111111")  || stringCompare(string,"10111111") || stringCompare(string,"10011111")  || 
+    stringCompare(string,"11111101") || stringCompare(string,"11111001") || stringCompare(string,"11011111") || stringCompare(string,"11111011") ||
+    stringCompare(string,"10111101") || stringCompare(string,"10011101") || stringCompare(string,"10111001") || stringCompare(string,"11011011")) {
+		return 11; //croisement en T
+    }else if(stringCompare(string,"11111000") || stringCompare(string,"11110000")) {
+		return 12; //croisement en L gauche
+    }else if(stringCompare(string,"00011111") || stringCompare(string,"00001111")) {
+		return 13; //croisement en L droite
 	}else{
-		return 0;
-	}
+        return 0;
+    }
 	
 }
 
@@ -294,11 +323,11 @@ void inverseMG(){
 void VITESSE_PID()
 {
 	printf("In PID\n");
-	puiss_MD = 1260 -PID;
+	puiss_MD = 1080 -PID; //30 % de 3600
 	if (puiss_MD <0){
 		puiss_MD = 0;
 	}
-	puiss_MG = 2340 - puiss_MD;
+	puiss_MG = 1980 - puiss_MD;
 	set_MD(puiss_MD);
 	set_MG(puiss_MG);
 	
@@ -307,17 +336,17 @@ void VITESSE_PID()
 
 void SMOOTHSTOP()
 {
-	if(puiss_MD >= 200)
+	if(puiss_MD >= 100)
 	{
-		set_MD(puiss_MD - 200);
+		set_MD(puiss_MD - 100);
 	}
 	else
 	{
 		set_MD(0);
 	}
-	if(puiss_MG >= 200)
+	if(puiss_MG >= 100)
 	{
-		set_MG(puiss_MG - 200);
+		set_MG(puiss_MG - 100);
 	}
 	else
 	{
@@ -360,6 +389,7 @@ int main() {
 	// main loop
 	printf("Endless loop!\n");
     short int x=0;
+    int error = 0;
     CHARGE();
     short int vc[8] = { 12 , 12 , 12 , 12 , 12 , 12 , 12 , 12 };
 	set_MG(30);
@@ -367,624 +397,239 @@ int main() {
 	while(1) {
         if(TIM4_triggered){
 			TIM4_triggered = 0;
-			switch(state){
-			//cas D0: le véhicule est "aligné" avec la ligne
-			case D0 :
-			    
-				for (int i=0; i < 4; i++)                              
-				{
-					if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))== 0))
-					{
-						vc[i] = x;
-					}
-					if((vc[i+4] > x) & ((GPIOD_IDR & (1 << i ))== 0))
-					{
-						vc[i+4] = x;
-					}
-				}
-                if (x == 11)
+			for (int i=0; i < 4; i++)                              
+            {
+                if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))== 0))
                 {
-					
-                    x = 0;
-					printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",vc[0],vc[1],vc[2],vc[3],vc[4],vc[5],vc[6],vc[7]);
-                    CHARGE();
-
-					P = get_error(vc);
-					I = I + P;
-					D = P - PAvant;
-					PID = (KP*P) +(KI*I)+ (KD*D);
-					PAvant = P;
-					printf("P: %d, result get_error: %d\n",P,get_error(vc));
-					VITESSE_PID();
-
-
-					if(vc[3] < SEUIL_BLANC && vc[4] < SEUIL_BLANC)
-					{
-						if(vc[0] < SEUIL_BLANC && vc[1] < SEUIL_BLANC && vc[2] < SEUIL_BLANC && vc[5] < SEUIL_BLANC && vc[6] < SEUIL_BLANC && vc[7] < SEUIL_BLANC)
-						{
-							state = SR;
-                    		printf("SR\n");
-						}
-					}
-
-					if(vc[7] > SEUIL_NOIR && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC))
-					{
-						state = CLR;
-						printf("CR\n");
-					}
-
-					if(vc[0] > SEUIL_NOIR && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC))
-					{
-						state = CLL;
-						printf("CL\n");
-					}
-
-					if(vc[7] > SEUIL_NOIR && vc[0] > SEUIL_NOIR && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC))
-					{
-						state = CT;
-						printf("CT\n");
-					}
-
+                    vc[i] = x;
                 }
-                else
+                if((vc[i+4] > x) & ((GPIOD_IDR & (1 << i ))== 0))
                 {
-                	if (x == 1)
-                	{
-                		CAPTURE_START();
-                		vc[0] = 12;
-                		vc[1] = 12;
-                		vc[2] = 12;
-                		vc[3] = 12;
-                		vc[4] = 12;
-                		vc[5] = 12;
-                		vc[6] = 12;
-                		vc[7] = 12;
-                	}
-                	x = x + 1;
+                    vc[i+4] = x;
                 }
-				break;
-			
-			//cas SR: sortie de route, le véhicule ne capte plus de ligne
-			case SR :
-			    //sortie de route
-				I = 0;
-				set_MD(0);
-				set_MG(0);
-				for (int i=0; i < 4; i++)                              
-				{
-					if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))== 0))
-					{
-						vc[i] = x;
-					}
-					if((vc[i+4] > x) & ((GPIOD_IDR & (1 << i ))== 0))
-					{
-						vc[i+4] = x;
-					}
-				}
-                if (x == 11)
-                {
-                    x = 0;
-					printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",vc[0],vc[1],vc[2],vc[3],vc[4],vc[5],vc[6],vc[7]);
-                    CHARGE();
-				}
-				else
-                {
-                	if (x == 1)
-                	{
-                		CAPTURE_START();
-                		vc[0] = 12;
-                		vc[1] = 12;
-                		vc[2] = 12;
-                		vc[3] = 12;
-                		vc[4] = 12;
-                		vc[5] = 12;
-                		vc[6] = 12;
-                		vc[7] = 12;
-                	}
-                	x = x + 1;
-                }							//TODO
-				break;
-			
-			//cas CLR: le véhicule détecte un croisement en L menant à droite
-			case CLR :
-			    //ralentir jusqu'à arret
-				for (int i=0; i < 4; i++)                              
-				{
-					if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))== 0))
-					{
-						vc[i] = x;
-					}
-					if((vc[i+4] > x) & ((GPIOD_IDR & (1 << i ))== 0))
-					{
-						vc[i+4] = x;
-					}
-				}
-                if (x == 11)
-                {
-                    x = 0;
-					printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",vc[0],vc[1],vc[2],vc[3],vc[4],vc[5],vc[6],vc[7]);
-                    CHARGE();
+            }
+            if (x == 11)
+            {
+                
+                x = 0;
+                printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",vc[0],vc[1],vc[2],vc[3],vc[4],vc[5],vc[6],vc[7]);
+                CHARGE();
+                switch(etat){
+                //cas D0: le véhicule est "aligné" avec la ligne
+                case OUT :
+					printf("CASE OUT");
+                    if (compare_line(vc)){
+                        etat = LINE;
+						PAvant = 0;
+						I = 0;
+                        break;
+                    }
+                    stop_MD();
+                    stop_MG();
+                    break;
+                case LINE:
+					printf("CASE LINE");
+                    error = get_error(vc);
+                    switch(error){
+                        case 10:
+                            etat = OUT;
+                            stop_MD();
+                            stop_MG();
+                            break;
+                        case 11:
+                            etat = INTERSECTION;
+                            type = T;
+                            stop_MD();
+                            stop_MG();
+                            break;
+                        case 12:
+                            etat = INTERSECTION;
+                            type = LL;
+                            stop_MD();
+                            stop_MG();
+                            break;
+                        case 13:
+                            etat = INTERSECTION;
+                            type = LR;
+                            stop_MD();
+                            stop_MG();
+                            break;
+                        default:
+                            P = error;
+                            I = I + P;
+                            D = P - PAvant;
+                            PID = (KP*P) +(KI*I)+ (KD*D);
+                            PAvant = P;
+                            printf("P: %d, result get_error: %d\n",P,get_error(vc));
+                            VITESSE_PID();
+                            break;
+                    }
+                    break;
+                case INTERSECTION:
+                    printf("CASE INTERSECTION\n");
+                    
+                    switch(type){
+                        case T:
+                            printf("CASE T\n");
+                            SMOOTHSTOP();
+                            if(vc[7] < SEUIL_BLANC && vc[0] < SEUIL_BLANC && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC))
+                            {
+                                type = X;
+                                //printf("CX\n");
+                            }
+                            if( puiss_MD == 0 && puiss_MG == 0)
+                            {
+                                //interrogez mémoire sur direction à prendre
+                                type = TR1;
+                            }
+                            break;
+                        case LL:
+                            printf("CASE LL\n");
+                            SMOOTHSTOP();
+                            if(vc[7] > SEUIL_NOIR && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC))
+                            {
+                                type = T;
+                                //printf("CT\n");
+                            }
 
-					SMOOTHSTOP();
+                            if(vc[0] < SEUIL_BLANC && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC))
+                            {
+                                type = TL;
+                                //printf("CTL\n");
+                            }
+                            if( puiss_MD == 0 && puiss_MG == 0)
+                            {
+                                //interrogez mémoire sur direction à prendre
+                                type = TL1;
+                            }
+                            break;
+                        case LR:
+                            printf("CASE LR\n");
+                            SMOOTHSTOP();
+                            if(vc[0] > SEUIL_NOIR && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC))
+                            {
+                                type = T;
+                                //printf("CT\n");
+                            }
 
-					if(vc[0] > SEUIL_NOIR && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC))
-						{
-							state = CT;
-							printf("CT\n");
-						}
-
-					if(vc[7] < SEUIL_BLANC && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC))
-					{
-						state = CTR;
-						printf("CTR\n");
-					}
-					if( puiss_MD == 0 && puiss_MG == 0)
-					{
-						//interrogez mémoire sur direction à prendre
-						state = TR1;
-					}
-				}
-				else
+                            if(vc[7] < SEUIL_BLANC && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC))
+                            {
+                                type = TR;
+                                //printf("CTR\n");
+                            }
+                            if( puiss_MD == 0 && puiss_MG == 0)
+                            {
+                                //interrogez mémoire sur direction à prendre
+                                type = TR1;
+                            }
+                            break;
+                        case X:
+                            printf("CASE X\n");
+                            SMOOTHSTOP();
+                            if( puiss_MD == 0 && puiss_MG == 0)
+                            {
+                                //interrogez mémoire sur direction à prendre
+                                type = TL1;
+                            }
+                            break;
+                        case TL:
+                            printf("CASE TL\n");
+                            SMOOTHSTOP();
+                            if( puiss_MD == 0 && puiss_MG == 0)
+                            {
+                                //interrogez mémoire sur direction à prendre
+                                type = TL1;
+                                //printf("TL1\n");
+                            }
+                            break;
+                        case TR:
+                            printf("CASE TR\n");
+                            SMOOTHSTOP();
+                            if( puiss_MD == 0 && puiss_MG == 0)
+                            {
+                                type = TR1;
+                                //interrogez mémoire sur direction à prendre
+                            }
+                            break;
+                        case TR1:
+                            printf("CASE TR1\n");
+                            inverseMD();
+                            set_MD(1000);
+                            set_MG(850);
+                            type = TR2;
+                            break;
+                        case TR2:
+                            printf("CASE TR2\n");
+                            if(vc[3] < SEUIL_BLANC && vc[4] < SEUIL_BLANC)
+                            {
+                                type = TR3;
+                                //printf("TR3\n");
+                            }
+                            break;
+                        case TR3:
+                            printf("CASE TR3\n");
+                            if(vc[3] > SEUIL_NOIR || vc[4] > SEUIL_NOIR )
+                            {
+                                inverseMD();
+                                set_MD(0);
+                                set_MG(0);
+                                etat = LINE;
+                                PAvant = 0;
+                                I= 0;
+                                //printf("D0\n");
+                            }
+                            break;
+                        case TL1:
+                            printf("CASE TL1\n");
+                            inverseMG();
+                            set_MD(850);
+                            set_MG(1000);
+                            type = TL2;
+                            break;
+                        case TL2:
+                            printf("CASE TL2\n");
+                            if(vc[3] < SEUIL_BLANC && vc[4] < SEUIL_BLANC)
+                            {
+                                //interrogez mémoire sur direction à prendre
+                                type = TL3;
+                                //printf("TL3\n");
+                            }
+                            break;
+                        case TL3:
+                            printf("CASE TL3\n");
+                            if(vc[3] > SEUIL_NOIR || vc[4] > SEUIL_NOIR )
+                            {
+                                inverseMG();
+                                set_MD(0);
+                                set_MG(0);
+                                etat = LINE;
+                                PAvant = 0;
+                                I= 0;
+                                //printf("D0\n");
+                            }
+                            break;
+                        
+                    }
+                    break;
+                }  
+            
+            }
+            else
+            {
+                if (x == 1)
                 {
-                	if (x == 1)
-                	{
-                		CAPTURE_START();
-                		vc[0] = 12;
-                		vc[1] = 12;
-                		vc[2] = 12;
-                		vc[3] = 12;
-                		vc[4] = 12;
-                		vc[5] = 12;
-                		vc[6] = 12;
-                		vc[7] = 12;
-                	}
-                	x = x + 1;
+                    CAPTURE_START();
+                    vc[0] = 12;
+                    vc[1] = 12;
+                    vc[2] = 12;
+                    vc[3] = 12;
+                    vc[4] = 12;
+                    vc[5] = 12;
+                    vc[6] = 12;
+                    vc[7] = 12;
                 }
-				break;
-			
-			//cas CLL: le véhicule détecte un croisement en L menant à gauche
-			case CLL :
-			    //ralentir jusqu'à arret
-				for (int i=0; i < 4; i++)                              
-					{
-						if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))== 0))
-						{
-							vc[i] = x;
-						}
-						if((vc[i+4] > x) & ((GPIOD_IDR & (1 << i ))== 0))
-						{
-							vc[i+4] = x;
-						}
-					}
-				if (x == 11)
-				{
-					x = 0;
-					printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",vc[0],vc[1],vc[2],vc[3],vc[4],vc[5],vc[6],vc[7]);
-					CHARGE();
-
-					SMOOTHSTOP();
-
-					if(vc[7] > SEUIL_NOIR && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC))
-						{
-							state = CT;
-							printf("CT\n");
-						}
-
-					if(vc[0] < SEUIL_BLANC && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC))
-					{
-						state = CTL;
-						printf("CTL\n");
-					}
-					if( puiss_MD == 0 && puiss_MG == 0)
-					{
-						//interrogez mémoire sur direction à prendre
-						state = TL1;
-					}
-				}
-				else
-				{
-					if (x == 1)
-					{
-						CAPTURE_START();
-						vc[0] = 12;
-						vc[1] = 12;
-						vc[2] = 12;
-						vc[3] = 12;
-						vc[4] = 12;
-						vc[5] = 12;
-						vc[6] = 12;
-						vc[7] = 12;
-					}
-					x = x + 1;
-				}
-				break;
-			
-			//cas CT: le véhicule détecte un croisement en T menant à gauche et à droite
-			case CT :
-			    //ralentir jusqu'à arret
-				for (int i=0; i < 4; i++)                              
-				{
-					if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))== 0))
-					{
-						vc[i] = x;
-					}
-					if((vc[i+4] > x) & ((GPIOD_IDR & (1 << i ))== 0))
-					{
-						vc[i+4] = x;
-					}
-				}
-                if (x == 11)
-                {
-                    x = 0;
-					printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",vc[0],vc[1],vc[2],vc[3],vc[4],vc[5],vc[6],vc[7]);
-                    CHARGE();
-
-					SMOOTHSTOP();
-
-					if(vc[7] < SEUIL_BLANC && vc[0] < SEUIL_BLANC && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC))
-					{
-						state = CX;
-						printf("CX\n");
-					}
-					if( puiss_MD == 0 && puiss_MG == 0)
-					{
-						//interrogez mémoire sur direction à prendre
-						state = TR1;
-					}
-				}
-				else
-                {
-                	if (x == 1)
-                	{
-                		CAPTURE_START();
-                		vc[0] = 12;
-                		vc[1] = 12;
-                		vc[2] = 12;
-                		vc[3] = 12;
-                		vc[4] = 12;
-                		vc[5] = 12;
-                		vc[6] = 12;
-                		vc[7] = 12;
-                	}
-                	x = x + 1;
-                }
-				break;
-			
-			//cas CTR: le véhicule détecte un croisement en T menant en face et à droite
-			case CTR :
-			     //ralentir jusqu'à arret
-				for (int i=0; i < 4; i++)                              
-				{
-					if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))== 0))
-					{
-						vc[i] = x;
-					}
-					if((vc[i+4] > x) & ((GPIOD_IDR & (1 << i ))== 0))
-					{
-						vc[i+4] = x;
-					}
-				}
-                if (x == 11)
-                {
-                    x = 0;
-					printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",vc[0],vc[1],vc[2],vc[3],vc[4],vc[5],vc[6],vc[7]);
-                    CHARGE();
-
-					SMOOTHSTOP();
-
-					if( puiss_MD == 0 && puiss_MG == 0)
-					{
-						state = TR1;
-						//interrogez mémoire sur direction à prendre
-					}
-				}
-				else
-                {
-                	if (x == 1)
-                	{
-                		CAPTURE_START();
-                		vc[0] = 12;
-                		vc[1] = 12;
-                		vc[2] = 12;
-                		vc[3] = 12;
-                		vc[4] = 12;
-                		vc[5] = 12;
-                		vc[6] = 12;
-                		vc[7] = 12;
-                	}
-                	x = x + 1;
-                }
-				break;
-			
-			//cas CTL: le véhicule détecte un croisement en T menant en face et à gauche
-			case CTL :
-			    //ralentir jusqu'à arret
-				for (int i=0; i < 4; i++)                              
-				{
-					if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))== 0))
-					{
-						vc[i] = x;
-					}
-					if((vc[i+4] > x) & ((GPIOD_IDR & (1 << i ))== 0))
-					{
-						vc[i+4] = x;
-					}
-				}
-                if (x == 11)
-                {
-                    x = 0;
-					printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",vc[0],vc[1],vc[2],vc[3],vc[4],vc[5],vc[6],vc[7]);
-                    CHARGE();
-
-					SMOOTHSTOP();
-
-					if( puiss_MD == 0 && puiss_MG == 0)
-					{
-						//interrogez mémoire sur direction à prendre
-						state = TL1;
-						printf("TL1\n");
-					}
-				}
-				else
-                {
-                	if (x == 1)
-                	{
-                		CAPTURE_START();
-                		vc[0] = 12;
-                		vc[1] = 12;
-                		vc[2] = 12;
-                		vc[3] = 12;
-                		vc[4] = 12;
-                		vc[5] = 12;
-                		vc[6] = 12;
-                		vc[7] = 12;
-                	}
-                	x = x + 1;
-                }
-				break;
-			
-			//cas CX: le véhicule détecte un croisement en X 
-			case CX :
-				for (int i=0; i < 4; i++)                              
-					{
-						if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))== 0))
-						{
-							vc[i] = x;
-						}
-						if((vc[i+4] > x) & ((GPIOD_IDR & (1 << i ))== 0))
-						{
-							vc[i+4] = x;
-						}
-					}
-				if (x == 11)
-				{
-					x = 0;
-					printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",vc[0],vc[1],vc[2],vc[3],vc[4],vc[5],vc[6],vc[7]);
-					CHARGE();
-
-					SMOOTHSTOP();
-
-					if( puiss_MD == 0 && puiss_MG == 0)
-					{
-						//interrogez mémoire sur direction à prendre
-						state = TL1;
-					}
-				}
-				else
-                {
-                	if (x == 1)
-                	{
-                		CAPTURE_START();
-                		vc[0] = 12;
-                		vc[1] = 12;
-                		vc[2] = 12;
-                		vc[3] = 12;
-                		vc[4] = 12;
-                		vc[5] = 12;
-                		vc[6] = 12;
-                		vc[7] = 12;
-                	}
-                	x = x + 1;
-                }
-				break;
-
-				//tourner à gauche etape 1
-				case TL1 :
-					inverseMG();
-					set_MD(1000);
-					set_MG(1500);
-					state = TL2;
-				break;
-				//tourner à gauche etape 2
-				case TL2 :
-					
-					for (int i=0; i < 4; i++)                              
-					{
-						if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))== 0))
-						{
-							vc[i] = x;
-						}
-						if((vc[i+4] > x) & ((GPIOD_IDR & (1 << i ))== 0))
-						{
-							vc[i+4] = x;
-						}
-					}
-					if (x == 11)
-					{
-						x = 0;
-						printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",vc[0],vc[1],vc[2],vc[3],vc[4],vc[5],vc[6],vc[7]);
-						CHARGE();
-
-
-						if(vc[0] > SEUIL_NOIR || vc[1] > SEUIL_NOIR)
-						{
-							//interrogez mémoire sur direction à prendre
-							state = TL3;
-							printf("TL3\n");
-						}
-					}
-					else
-					{
-						if (x == 1)
-						{
-							CAPTURE_START();
-							vc[0] = 12;
-							vc[1] = 12;
-							vc[2] = 12;
-							vc[3] = 12;
-							vc[4] = 12;
-							vc[5] = 12;
-							vc[6] = 12;
-							vc[7] = 12;
-						}
-						x = x + 1;
-					}
-					break;
-				//tourner à gauche etape 3
-				case TL3 :
-					for (int i=0; i < 4; i++)                              
-					{
-						if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))== 0))
-						{
-							vc[i] = x;
-						}
-						if((vc[i+4] > x) & ((GPIOD_IDR & (1 << i ))== 0))
-						{
-							vc[i+4] = x;
-						}
-					}
-					if (x == 11)
-					{
-						x = 0;
-						printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",vc[0],vc[1],vc[2],vc[3],vc[4],vc[5],vc[6],vc[7]);
-						CHARGE();
-
-
-						if(vc[3] > SEUIL_NOIR || vc[4] > SEUIL_NOIR || vc[5] > SEUIL_NOIR)
-						{
-							inverseMG();
-							set_MD(0);
-							set_MG(0);
-							state = D0;
-							printf("D0\n");
-						}
-					}
-					else
-					{
-						if (x == 1)
-						{
-							CAPTURE_START();
-							vc[0] = 12;
-							vc[1] = 12;
-							vc[2] = 12;
-							vc[3] = 12;
-							vc[4] = 12;
-							vc[5] = 12;
-							vc[6] = 12;
-							vc[7] = 12;
-						}
-						x = x + 1;
-					}
-					break;
-
-			//tourner à droite etape 1
-				case TR1 :
-					inverseMD();
-					set_MD(1500);
-					set_MG(1000);
-					state = TR2;
-				break;
-				//tourner à droite etape 2
-				case TR2 :
-					
-					for (int i=0; i < 4; i++)                              
-					{
-						if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))== 0))
-						{
-							vc[i] = x;
-						}
-						if((vc[i+4] > x) & ((GPIOD_IDR & (1 << i ))== 0))
-						{
-							vc[i+4] = x;
-						}
-					}
-					if (x == 11)
-					{
-						x = 0;
-						printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",vc[0],vc[1],vc[2],vc[3],vc[4],vc[5],vc[6],vc[7]);
-						CHARGE();
-
-
-						if(vc[7] > SEUIL_NOIR || vc[6] > SEUIL_NOIR)
-						{
-							state = TR3;
-							printf("TR3\n");
-						}
-					}
-					else
-					{
-						if (x == 1)
-						{
-							CAPTURE_START();
-							vc[0] = 12;
-							vc[1] = 12;
-							vc[2] = 12;
-							vc[3] = 12;
-							vc[4] = 12;
-							vc[5] = 12;
-							vc[6] = 12;
-							vc[7] = 12;
-						}
-						x = x + 1;
-					}
-					break;
-				//tourner à droite etape 3
-				case TR3 :
-					for (int i=0; i < 4; i++)                              
-					{
-						if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))== 0))
-						{
-							vc[i] = x;
-						}
-						if((vc[i+4] > x) & ((GPIOD_IDR & (1 << i ))== 0))
-						{
-							vc[i+4] = x;
-						}
-					}
-					if (x == 11)
-					{
-						x = 0;
-						printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",vc[0],vc[1],vc[2],vc[3],vc[4],vc[5],vc[6],vc[7]);
-						CHARGE();
-
-
-						if(vc[3] > SEUIL_NOIR || vc[4] > SEUIL_NOIR || vc[2] > SEUIL_NOIR)
-						{
-							inverseMD();
-							set_MD(0);
-							set_MG(0);
-							state = D0;
-							printf("D0\n");
-						}
-					}
-					else
-					{
-						if (x == 1)
-						{
-							CAPTURE_START();
-							vc[0] = 12;
-							vc[1] = 12;
-							vc[2] = 12;
-							vc[3] = 12;
-							vc[4] = 12;
-							vc[5] = 12;
-							vc[6] = 12;
-							vc[7] = 12;
-						}
-						x = x + 1;
-					}
-					break;
-			}
+                x = x + 1;
+            }
 		}
 	}__asm("nop");
 	return 0;
