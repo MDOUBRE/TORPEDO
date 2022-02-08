@@ -65,10 +65,11 @@ volatile int PAvant = 0; // Previous error
 volatile int PID = 0;
 volatile enum{ OUT,LINE,INTERSECTION} etat = OUT;
 volatile enum{ T,LL,LR,X,TL,TR,TR1,TR2,TR3,TL1,TL2,TL3} type = T;
-volatile enum{ N, E, S ,O} direction = S;
+volatile enum{ N, E, S ,O} direction = E;
 volatile int d = 0;
 volatile short int demitour = 0;
-
+volatile short int chemin[20] = { -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 };
+volatile short int checkpoint[10] = {9 , 2  , 7 ,9 ,7 ,2 ,0 ,1 ,-1 , -1};
 
 
 //E0  1278 -> B ; 45 -> N
@@ -91,32 +92,6 @@ struct croisement
     int sud;
 };
 typedef struct croisement croisement;
-
-int stringCompare(char * first, char * second){
-	for (int i = 0; i < 8; i++) {
-		if(first[i]!=second[i]){
-			return 0;
-		}
-	}
-	return 1;
-}
-int compare_line(short int * array){
-    char string[8];
-	for (short int i =0 ; i < 8; i++){
-		if (array[i]< 6){
-			string[i] = '0';
-		}else{
-			string[i] = '1';
-		}
-	}
-    if (stringCompare(string,"00011000")){
-		return 1;
-	}else{
-        return 0;
-    }
-}
-
-
 
 int get_error(short int * array){
 
@@ -399,203 +374,215 @@ void SMOOTHSTOP()
 	}
 }
 
+int calculer_chemin(short int start, short int end);
+
 int choix_direction(int x, short int* Tab)
 {
     if(x == 19)
     {
-        set_MD(0);
-        set_MG(0);
-    }
-    else
-    {
-        switch(direction)
-            {
-                case N:
-                    if(Tab[x] == 1)
-                    {
-                        set_MD(0);
-                        set_MG(0);
-                        etat = LINE;
-                        PAvant = 0;
-                        I= 0;
-                        direction = N;
-                    }
-                    else if(Tab[x] == 2)
-                    {
-                        type = TR1;
-                        direction = E;
-                    }
-                    else if(Tab[x] == 3)
-                    {
-                        switch(type){
-                            case X:
-                                demitour = 1;
-                                break;
-                            case LR:
-                                demitour = 1;
-                                break;
-                            case LL:
-                                demitour = 0;
-                                break;
-                            case TR:
-                                demitour = 1;
-                                break;
-                            case TL:
-                                demitour = 0;
-                                break;
-                            case T:
-                                demitour = 1;
-                                break;
-                        }
-                        type = TR1;
-                        direction = S;
-                    }
-                    else if(Tab[x] == 4)
-                    {
-                        type = TL1;
-                        direction = O;
-                    }
-                    break;
-                case E:
-                    if(Tab[x] == 1)
-                    {
-                        type = TL1;
-                        direction = N;
-                    }
-                    else if(Tab[x] == 2)
-                    {
-                        set_MD(0);
-                        set_MG(0);
-                        etat = LINE;
-                        PAvant = 0;
-                        I= 0;
-                        direction = E;
-                    }
-                    else if(Tab[x] == 3)
-                    {
-                        type = TR1;
-                        direction = S;
-                    }
-                    else if(Tab[x] == 4)
-                    {
-                        switch(type){
-                            case X:
-                                demitour = 1;
-                                break;
-                            case LR:
-                                demitour = 1;
-                                break;
-                            case LL:
-                                demitour = 0;
-                                break;
-                            case TR:
-                                demitour = 1;
-                                break;
-                            case TL:
-                                demitour = 0;
-                                break;
-                            case T:
-                                demitour = 1;
-                                break;
-                        }
-                        type = TR1;
-                        direction = O;
-                    }
-                    break;
-                case S:
-                    if(Tab[x] == 1)
-                    {
-                        switch(type){
-                            case X:
-                                demitour = 1;
-                                break;
-                            case LR:
-                                demitour = 1;
-                                break;
-                            case LL:
-                                demitour = 0;
-                                break;
-                            case TR:
-                                demitour = 1;
-                                break;
-                            case TL:
-                                demitour = 0;
-                                break;
-                            case T:
-                                demitour = 1;
-                                break;
-                        }
-                        type = TR1;
-                        direction = N;
-                    }
-                    else if(Tab[x] == 2)
-                    {
-                        type = TL1;
-                        direction = E;
-                    }
-                    else if(Tab[x] == 3)
-                    {
-                        set_MD(0);
-                        set_MG(0);
-                        etat = LINE;
-                        PAvant = 0;
-                        I= 0;
-                        direction = S;
-                    }
-                    else if(Tab[x] == 4)
-                    {
-                        type = TR1;
-                        direction = O;
-                    }
-                    break;
-                case O:
-                    if(Tab[x] == 1)
-                    {
-                        type = TR1;
-                        direction = N;
-                    }
-                    else if(Tab[x] == 2)
-                    {
-                        switch(type){
-                            case X:
-                                demitour = 1;
-                                break;
-                            case LR:
-                                demitour = 1;
-                                break;
-                            case LL:
-                                demitour = 0;
-                                break;
-                            case TR:
-                                demitour = 1;
-                                break;
-                            case TL:
-                                demitour = 0;
-                                break;
-                            case T:
-                                demitour = 1;
-                                break;
-                        }
-                        type = TR1;
-                        direction = E;
-                    }
-                    else if(Tab[x] == 3)
-                    {
-                        type = TL1;
-                        direction = S;
-                    }
-                    else if(Tab[x] == 4)
-                    {
-                        set_MD(0);
-                        set_MG(0);
-                        etat = LINE;
-                        PAvant = 0;
-                        I= 0;
-                        direction = O;
-                    }
-                    break;
-            }
+        d = d + 1;
+        if(d == 10 || checkpoint[d+1] == -1) 
+        {
+            set_MD(0);
+            set_MG(0);
+            DISABLE_IRQS;
+            return 0;
         }
+        else
+        {
+            DISABLE_IRQS;
+            x = calculer_chemin(checkpoint[d], checkpoint[d+1]);
+            ENABLE_IRQS;
+        }
+    } 
+    switch(direction)
+        {
+            case N:
+                if(Tab[x] == 1)
+                {
+                    set_MD(0);
+                    set_MG(0);
+                    etat = LINE;
+                    PAvant = 0;
+                    I= 0;
+                    direction = N;
+                }
+                else if(Tab[x] == 2)
+                {
+                    type = TR1;
+                    direction = E;
+                }
+                else if(Tab[x] == 3)
+                {
+                    switch(type){
+                        case X:
+                            demitour = 1;
+                            break;
+                        case LR:
+                            demitour = 1;
+                            break;
+                        case LL:
+                            demitour = 0;
+                            break;
+                        case TR:
+                            demitour = 1;
+                            break;
+                        case TL:
+                            demitour = 0;
+                            break;
+                        case T:
+                            demitour = 1;
+                            break;
+                    }
+                    type = TR1;
+                    direction = S;
+                }
+                else if(Tab[x] == 4)
+                {
+                    type = TL1;
+                    direction = O;
+                }
+                break;
+            case E:
+                if(Tab[x] == 1)
+                {
+                    type = TL1;
+                    direction = N;
+                }
+                else if(Tab[x] == 2)
+                {
+                    set_MD(0);
+                    set_MG(0);
+                    etat = LINE;
+                    PAvant = 0;
+                    I= 0;
+                    direction = E;
+                }
+                else if(Tab[x] == 3)
+                {
+                    type = TR1;
+                    direction = S;
+                }
+                else if(Tab[x] == 4)
+                {
+                    switch(type){
+                        case X:
+                            demitour = 1;
+                            break;
+                        case LR:
+                            demitour = 1;
+                            break;
+                        case LL:
+                            demitour = 0;
+                            break;
+                        case TR:
+                            demitour = 1;
+                            break;
+                        case TL:
+                            demitour = 0;
+                            break;
+                        case T:
+                            demitour = 1;
+                            break;
+                    }
+                    type = TR1;
+                    direction = O;
+                }
+                break;
+            case S:
+                if(Tab[x] == 1)
+                {
+                    switch(type){
+                        case X:
+                            demitour = 1;
+                            break;
+                        case LR:
+                            demitour = 1;
+                            break;
+                        case LL:
+                            demitour = 0;
+                            break;
+                        case TR:
+                            demitour = 1;
+                            break;
+                        case TL:
+                            demitour = 0;
+                            break;
+                        case T:
+                            demitour = 1;
+                            break;
+                    }
+                    type = TR1;
+                    direction = N;
+                }
+                else if(Tab[x] == 2)
+                {
+                    type = TL1;
+                    direction = E;
+                }
+                else if(Tab[x] == 3)
+                {
+                    set_MD(0);
+                    set_MG(0);
+                    etat = LINE;
+                    PAvant = 0;
+                    I= 0;
+                    direction = S;
+                }
+                else if(Tab[x] == 4)
+                {
+                    type = TR1;
+                    direction = O;
+                }
+                break;
+            case O:
+                if(Tab[x] == 1)
+                {
+                    type = TR1;
+                    direction = N;
+                }
+                else if(Tab[x] == 2)
+                {
+                    switch(type){
+                        case X:
+                            demitour = 1;
+                            break;
+                        case LR:
+                            demitour = 1;
+                            break;
+                        case LL:
+                            demitour = 0;
+                            break;
+                        case TR:
+                            demitour = 1;
+                            break;
+                        case TL:
+                            demitour = 0;
+                            break;
+                        case T:
+                            demitour = 1;
+                            break;
+                    }
+                    type = TR1;
+                    direction = E;
+                }
+                else if(Tab[x] == 3)
+                {
+                    type = TL1;
+                    direction = S;
+                }
+                else if(Tab[x] == 4)
+                {
+                    set_MD(0);
+                    set_MG(0);
+                    etat = LINE;
+                    PAvant = 0;
+                    I= 0;
+                    direction = O;
+                }
+                break;
+        }
+    
     return x+1;
 }
 
@@ -606,8 +593,11 @@ int calculer_chemin(short int start, short int end)
     short int pred[20] = { -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 };
 
     cost[start] = 0;
-    short int chemin[20] = { -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 };
+    for (int i = 0; i<20 ;i++){
+        chemin[i] = -1;
+    }
     chemin[19] = end;
+    
     int c = 19;
         // remplir
 
@@ -617,7 +607,7 @@ int calculer_chemin(short int start, short int end)
     grille[0].ouest = -1;
     grille[1].nord = 4;
     grille[1].est = -1;
-    grille[1].sud = -1;
+    grille[1].sud = 17;
     grille[1].ouest = 0;
     grille[2].nord = 7;
     grille[2].est = 3;
@@ -759,6 +749,7 @@ int calculer_chemin(short int start, short int end)
             chemin[i] = 4;
         }
     }
+    printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",chemin[12],chemin[13],chemin[14],chemin[15],chemin[16],chemin[17],chemin[18],chemin[19]);
 }
 
 int main() {
@@ -795,12 +786,10 @@ int main() {
 
     // calcul chemin
     
-    short int checkpoint[10] = {1 , 15 , 17 , -1 ,-1 ,-1 ,-1 ,-1 ,-1 ,-1 };
-
     short int start = checkpoint[d];
     short int end = checkpoint[d+1];
 
-    c = calculer_chemin(start,end);
+    short int c = calculer_chemin(start,end);
 	// main loop
 	printf("Endless loop!\n");
     short int x=0;
@@ -833,7 +822,7 @@ int main() {
                 //cas D0: le véhicule est "aligné" avec la ligne
                 case OUT :
 					printf("CASE OUT");
-                    if (compare_line(vc)){
+                    if (vc[3] > SEUIL_NOIR || vc[4] > SEUIL_NOIR ){
                         etat = LINE;
 						PAvant = 0;
 						I = 0;
@@ -979,6 +968,8 @@ int main() {
                             if(vc[3] > SEUIL_NOIR || vc[4] > SEUIL_NOIR )
                             {
                                 if (demitour){
+                                    demitour= 0;
+                                    inverseMD();
                                     type = TR1;
                                 }else{
                                     inverseMD();
