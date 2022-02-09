@@ -54,7 +54,6 @@ int sens_MG = 0; //[0,1] sens moteur gauche
 
 volatile int un_sur_deux = 0;
 volatile int TIM4_triggered = 0;
-//volatile enum{ D0 , SR , CLR , CLL , CT , CTR , CTL , CX , TL1 , TL2 , TL3 , TR1 , TR2 , TR3} state = D0;
 volatile int KP = 144; //Constante Proportionnelle
 volatile int P = 0 ; // Error
 volatile int KI = 1; //Constante Integrale
@@ -65,18 +64,13 @@ volatile int PAvant = 0; // Previous error
 volatile int PID = 0;
 volatile enum{ OUT,LINE,INTERSECTION} etat = OUT;
 volatile enum{ T,LL,LR,X,TL,TR,TR1,TR2,TR3,TL1,TL2,TL3} type = T;
-volatile enum{ N, E, S ,O} direction = E;
+volatile enum{ N, E, S ,O} direction = S;
 volatile int d = 0;
 volatile short int demitour = 0;
 volatile short int chemin[20] = { -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 };
-volatile short int checkpoint[10] = {9 , 2  , 7 ,9 ,7 ,2 ,0 ,1 ,-1 , -1};
+volatile short int checkpoint[10] = {1 , 2  , 7 , 11 , 7 , 17 , -1 ,1 ,-1 , -1};
 
 
-//E0  1278 -> B ; 45 -> N
-//R1  5678 -> B ; 23 -> N
-//R2  4567 -> B ; 12 -> N
-//L1  1234 -> B ; 67 -> N
-//L2  2345 -> B ; 78 -> N
 
 // calcul du temps entre de le moment ou la ligne d'un capteur est montee a 1 et le moment ou elle retombe a 0
 // passer la ligne du capteur en outpout avec pull up
@@ -359,6 +353,10 @@ void SMOOTHSTOP()
 	if(puiss_MD >= 25)
 	{
 		set_MD(puiss_MD - 25);
+        if(puiss_MD >= 25 + puiss_MG)
+        {
+            set_MG(puiss_MD - 25);
+        }
 	}
 	else
 	{
@@ -367,11 +365,17 @@ void SMOOTHSTOP()
 	if(puiss_MG >= 25)
 	{
 		set_MG(puiss_MG - 25);
+        if(puiss_MG >= 25 + puiss_MD)
+        {
+            set_MG(puiss_MG - 25);
+        }
 	}
 	else
 	{
 		set_MG(0);
 	}
+    
+
 }
 
 int calculer_chemin(short int start, short int end);
@@ -599,7 +603,6 @@ int calculer_chemin(short int start, short int end)
     chemin[19] = end;
     
     int c = 19;
-        // remplir
 
     grille[0].nord = 3;
     grille[0].est = 1;
@@ -730,26 +733,25 @@ int calculer_chemin(short int start, short int end)
         c = c-1;
     }
 
-     for (int i=c; i < 19; i++) 
+    for (int i=c; i < 19; i++) 
     {
         if(grille[chemin[i]].nord == chemin[i+1])
         {
             chemin[i] = 1;
         }
-        if(grille[chemin[i]].est == chemin[i+1])
+        else if(grille[chemin[i]].est == chemin[i+1])
         {
             chemin[i] = 2;
         }
-        if(grille[chemin[i]].sud == chemin[i+1])
+        else if(grille[chemin[i]].sud == chemin[i+1])
         {
             chemin[i] = 3;
         }
-        if(grille[chemin[i]].ouest == chemin[i+1])
+        else if(grille[chemin[i]].ouest == chemin[i+1])
         {
             chemin[i] = 4;
         }
     }
-    printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",chemin[12],chemin[13],chemin[14],chemin[15],chemin[16],chemin[17],chemin[18],chemin[19]);
 }
 
 int main() {
