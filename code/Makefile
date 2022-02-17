@@ -44,6 +44,12 @@ couleurs:
 
 debug_couleurs: couleurs
 	cd src; $(GDB) $(GDB_FLAGS) couleurs.elf
+
+servo:
+	cd src; $(MAKE) servo.elf
+
+debug_servo: servo
+	cd src; $(GDB) $(GDB_FLAGS) servo.elf
 	
 	
 # build distribution
@@ -59,7 +65,8 @@ DIST_SRC = \
 	src/tinyprintf.c \
 	src/moteurs.c \
 	src/suivi_de_ligne.c\
-	src/couleurs.c
+	src/couleurs.c\
+	src/servo.c
 	
 DIST_NAME=code
 

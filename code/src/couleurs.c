@@ -18,8 +18,11 @@
 #define DELAY_500 (WAIT_DELAY/2)
 #define DELAY_100 (WAIT_DELAY/10)
 
-enum{ETEINT, ROUGE, VERT, BLEU} couleur = ETEINT;
+enum{ETEINT, ROUGE, VERT, BLEU, CAPTE} couleur = ETEINT;
 int prochain = 0; //0 = rouge, 1 = vert, 2 = bleu 
+int val_rouge = 0;
+int val_vert = 0;
+int val_bleu = 0;
 
 void init(){
 	// LEDs
@@ -45,16 +48,20 @@ void init_TIM4(){
 	TIM4_CR1 = TIM_ARPE;
 }
 
-int handle_adc(){
+void handle_adc(int couleur){
     int val = 0;
     ADC1_CR2 |= ADC_SWSTART;
     while((ADC1_SR & ADC_EOC) == 0)__asm("nop");
     val = ADC1_DR;
-    printf("VAL = %d\n", val);
-    if(val > 3000){	
-        return 1;
+    if(couleur==0){
+        val_rouge = val;
     }
-    return 0;
+    else if(couleur==1){
+        val_vert = val;
+    }
+    else{
+        val_bleu = val;
+    }
 }
 
 int main(){
@@ -68,7 +75,9 @@ int main(){
 
     TIM4_CR1 = TIM4_CR1 | TIM_CEN;
     
+    int cas = 0;
     int allume = 0;
+    printf("coucou\n");
     while(1){
         for (int i=0;i<6;i++){
             if((TIM4_SR & TIM_UIF)!=0){
@@ -79,41 +88,59 @@ int main(){
                     GPIOD_BSRR = 1 << (B+16);
                     if(prochain==0){
                         couleur = ROUGE;
-                        prochain = (prochain+1)%3;
+                        prochain = (prochain+1)%4;
                     }
                     else if(prochain==1){
                         couleur = VERT;
-                        prochain = (prochain+1)%3;
+                        prochain = (prochain+1)%4;
                     }
                     else if(prochain==2){
                         couleur = BLEU;
-                        prochain = (prochain+1)%3;
+                        prochain = (prochain+1)%4;
+                    }
+                    else{
+                        couleur = CAPTE;
+                        prochain = (prochain+1)%4;
                     }
                     break;
                 case ROUGE:
                     GPIOD_BSRR = 1 << R;
-                    allume = handle_adc();
-                    if(allume==1){
-                        printf("ROUGE capte\n");
-                    }
+                    handle_adc(0);
                     couleur = ETEINT;
                     break;
                 case VERT:
                     GPIOD_BSRR = 1 << G;
-                    allume = handle_adc();
-                    if(allume==1){
-                        printf("VERT capte\n");
-                    }
+                    handle_adc(1);
                     couleur = ETEINT;
                     break;
                 case BLEU:
                     GPIOD_BSRR = 1 << B;
-                    allume = handle_adc();
-                    if(allume==1){
-                        printf("BLEU capte\n");
-                    }
+                    handle_adc(2);
                     couleur = ETEINT;
                     break;
+                case CAPTE:
+                    if((val_rouge > val_vert) && (val_rouge > val_bleu)){
+                        printf("valRouge = %d", val_rouge);
+                        printf("valVert = %d", val_vert);
+                        printf("valBleu = %d", val_bleu);
+                        printf("rouge capte\n");
+                        GPIOD_BSRR = 1 << R;
+                    }
+                    else if((val_vert > val_rouge) && (val_vert > val_bleu)){
+                        printf("valRouge = %d", val_rouge);
+                        printf("valVert = %d", val_vert);
+                        printf("valBleu = %d", val_bleu);
+                        printf("vert capte\n");
+                        GPIOD_BSRR = 1 << G;
+                    }
+                    else if((val_bleu > val_rouge) && (val_bleu > val_vert)){
+                        printf("valRouge = %d", val_rouge);
+                        printf("valVert = %d", val_vert);
+                        printf("valBleu = %d", val_bleu);
+                        printf("bleu capte\n");
+                        GPIOD_BSRR = 1 << B;
+                    }
+                    couleur = ETEINT;
                 default:
                     break;
                 }
@@ -121,22 +148,7 @@ int main(){
         
             }
         }
-    }__asm("nop");
-    
-    /*
-    int val = 0;
-    while (1)
-    {        
-        ADC1_CR2 |= ADC_SWSTART;
-        while((ADC1_SR & ADC_EOC) == 0)__asm("nop");
-        val = ADC1_DR;
-        printf("VAL = %d\n", val);
-        if(val > 3000){	
-            printf("bonsoir\n");
-        }
-    }__asm("nop");
-    */
-    
+    }__asm("nop");    
 
     return 0;
 }

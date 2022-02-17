@@ -6,7 +6,8 @@ STLINK_ROOT=stlink-1.5.1/build/Release
 PROGRAMS = \
 	moteurs.elf\
 	suivi_de_ligne.elf\
-	couleurs.elf
+	couleurs.elf\
+	servo.elf
 
 OBJECTS = $(SOURCES:.c=.o)
 
@@ -46,4 +47,7 @@ suivi_de_ligne.elf: startup.o suivi_de_ligne.o tinyprintf.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 couleurs.elf: startup.o couleurs.o tinyprintf.o
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+
+servo.elf: startup.o servo.o tinyprintf.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
