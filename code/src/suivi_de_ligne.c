@@ -40,6 +40,8 @@ int sens_MG = 0; //[0,1] sens moteur gauche
 #define MG2 7
 #define MODE 8
 
+#define SM 4
+
 #define TIM3_DIV 8
 #define TIM3_PERIOD	60000
 
@@ -49,8 +51,6 @@ int sens_MG = 0; //[0,1] sens moteur gauche
 #define KP_MG
 #define KI_MG
 #define KD_MG
-
-#define TAILLE_GRILLE
 
 volatile int un_sur_deux = 0;
 volatile int TIM4_triggered = 0;
@@ -64,14 +64,16 @@ volatile int PAvant = 0; // Previous error
 volatile int PID = 0;
 volatile enum{ OUT,LINE,INTERSECTION} etat = OUT;
 volatile enum{ T,LL,LR,X,TL,TR,TR1,TR2,TR3,TL1,TL2,TL3} type = T;
-volatile enum{ N, E, S ,O} direction = S;
 volatile int d = 0;
 volatile short int demitour = 0;
-volatile short int chemin[30] = { -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 ,
-                                  -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 ,
-                                  -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 };
-volatile short int checkpoint[10] = {0 , 25  , 14 , 11 , 7 , 17 , -1 , -1 ,-1 , -1};
 
+
+volatile enum{ N, E, S ,O} direction = O; // position de depart
+#define TAILLE_GRILLE 30 // <= 32
+#define CHEMIN_MAX 10
+volatile short int chemin[TAILLE_GRILLE];
+volatile short int checkpoint[CHEMIN_MAX] = {12 , 10  , 0 , 4 , 29 , 25 , 10 , 14 , 13 , -1};
+volatile short int TAB_SM[CHEMIN_MAX] =     {0 ,  0  , 1  ,  0 , 1 , 0  , 0  , 0  , 0 , 0 };
 
 
 // calcul du temps entre de le moment ou la ligne d'un capteur est montee a 1 et le moment ou elle retombe a 0
@@ -384,10 +386,17 @@ int calculer_chemin(short int start, short int end);
 
 int choix_direction(int x, short int* Tab)
 {
-    if(x == 29)
+    if(x == TAILLE_GRILLE -1)
     {
+
         d = d + 1;
-        if(d == 10 || checkpoint[d+1] == -1) 
+        if(TAB_SM[d]!= 0) 
+        {
+            DISABLE_IRQS;
+            depose_caisse();
+            ENABLE_IRQS;
+        }
+        if(d == CHEMIN_MAX || checkpoint[d+1] == -1) 
         {
             set_MD(0);
             set_MG(0);
@@ -594,22 +603,21 @@ int choix_direction(int x, short int* Tab)
 
 int calculer_chemin(short int start, short int end)
 {
-    croisement grille[30];
-    short int cost[30] = { 30 , 30 , 30 , 30 , 30 , 30 , 30 , 30 , 30 , 30 ,
-                           30 , 30 , 30 , 30 , 30 , 30 , 30 , 30 , 30 , 30 ,
-                           30 , 30 , 30 , 30 , 30 , 30 , 30 , 30 , 30 , 30 };
+    croisement grille[TAILLE_GRILLE];
+    short int cost[TAILLE_GRILLE];
     printf("cost\n");
-    short int pred[30] = { -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 ,
-                           -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 ,
-                           -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 };
-    printf("pred\n");
-    cost[start] = 0;
-    for (int i = 0; i<30 ;i++){
+    short int pred[TAILLE_GRILLE];
+
+    for (int i = 0; i<TAILLE_GRILLE ;i++){
+        cost[i] = TAILLE_GRILLE;
+        pred[i] = -1;
         chemin[i] = -1;
     }
-    chemin[29] = end;
+
+    cost[start] = 0;
+    chemin[TAILLE_GRILLE -1] = end;
     
-    int c = 29;
+    int c = TAILLE_GRILLE -1;
 
     grille[0].nord = 5;
     grille[0].est = 1;
@@ -733,9 +741,9 @@ int calculer_chemin(short int start, short int end)
     grille[29].ouest = 28;
 
     printf("grille\n");
-    for (int i=0; i < 30; i++) 
+    for (int i=0; i < TAILLE_GRILLE; i++) 
     {
-        for (int j=0; j < 30; j++)
+        for (int j=0; j < TAILLE_GRILLE; j++)
         {
             if(grille[j].nord != -1)
             {
@@ -780,7 +788,7 @@ int calculer_chemin(short int start, short int end)
         c = c-1;
     }
 
-    for (int i=c; i < 29; i++) 
+    for (int i=c; i < TAILLE_GRILLE -1; i++) 
     {
         if(grille[chemin[i]].nord == chemin[i+1])
         {
@@ -803,6 +811,41 @@ int calculer_chemin(short int start, short int end)
     printf("directions\n");
 }
 
+
+void init_SM(){
+    GPIOB_MODER = SET_BITS(GPIOB_MODER, 2*SM, 2, 0b10);
+    GPIOB_AFRL = SET_BITS(GPIOB_AFRL, 4*SM, 4, 2);
+    GPIOB_OTYPER &= ~(1 << SM);
+}
+
+void init_TIM2() {
+    return;
+}
+
+void start_SM() {
+}
+
+void stop_SM() {
+}
+
+void set_SM(int pulse) {
+}
+
+
+void depose_caisse(){
+    set_SM(50);
+    for(int i = 0;i<40000000;i++)__asm("nop");
+    stop_SM();
+    for(int i = 0;i<40000000;i++)__asm("nop");
+    set_SM(10);
+    for(int i = 0;i<40000000;i++)__asm("nop");
+    stop_SM();
+    for(int i = 0;i<40000000;i++)__asm("nop");
+}
+
+
+/*********************************************************************************/
+
 int main() {
 	printf("\nStarting...\n");
 
@@ -821,6 +864,8 @@ int main() {
     init_TIM4();
 	init_moteurs();
     init_TIM3();
+    init_TIM2();
+    init_SM();
 
     if(GPIOB_ODR & (1<<MD2)){
         sens_MD = 0;
