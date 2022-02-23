@@ -67,8 +67,10 @@ volatile enum{ T,LL,LR,X,TL,TR,TR1,TR2,TR3,TL1,TL2,TL3} type = T;
 volatile enum{ N, E, S ,O} direction = S;
 volatile int d = 0;
 volatile short int demitour = 0;
-volatile short int chemin[20] = { -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 };
-volatile short int checkpoint[10] = {1 , 2  , 7 , 11 , 7 , 17 , -1 ,1 ,-1 , -1};
+volatile short int chemin[30] = { -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 ,
+                                  -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 ,
+                                  -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 };
+volatile short int checkpoint[10] = {0 , 25  , 14 , 11 , 7 , 17 , -1 , -1 ,-1 , -1};
 
 
 
@@ -382,7 +384,7 @@ int calculer_chemin(short int start, short int end);
 
 int choix_direction(int x, short int* Tab)
 {
-    if(x == 19)
+    if(x == 29)
     {
         d = d + 1;
         if(d == 10 || checkpoint[d+1] == -1) 
@@ -592,103 +594,148 @@ int choix_direction(int x, short int* Tab)
 
 int calculer_chemin(short int start, short int end)
 {
-    croisement grille[20];
-    short int cost[20] = { 20 , 20 , 20 , 20 , 20 , 20 , 20 , 20 , 20 , 20 , 20 , 20 , 20 , 20 , 20 , 20 , 20 , 20 , 20 , 20 };
-    short int pred[20] = { -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 };
-
+    croisement grille[30];
+    short int cost[30] = { 30 , 30 , 30 , 30 , 30 , 30 , 30 , 30 , 30 , 30 ,
+                           30 , 30 , 30 , 30 , 30 , 30 , 30 , 30 , 30 , 30 ,
+                           30 , 30 , 30 , 30 , 30 , 30 , 30 , 30 , 30 , 30 };
+    printf("cost\n");
+    short int pred[30] = { -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 ,
+                           -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 ,
+                           -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 , -1 };
+    printf("pred\n");
     cost[start] = 0;
-    for (int i = 0; i<20 ;i++){
+    for (int i = 0; i<30 ;i++){
         chemin[i] = -1;
     }
-    chemin[19] = end;
+    chemin[29] = end;
     
-    int c = 19;
+    int c = 29;
 
-    grille[0].nord = 3;
+    grille[0].nord = 5;
     grille[0].est = 1;
     grille[0].sud = -1;
     grille[0].ouest = -1;
-    grille[1].nord = 4;
-    grille[1].est = -1;
-    grille[1].sud = 17;
+    grille[1].nord = 6;
+    grille[1].est = 2;
+    grille[1].sud = -1;
     grille[1].ouest = 0;
     grille[2].nord = 7;
     grille[2].est = 3;
     grille[2].sud = -1;
-    grille[2].ouest = -1;
-    grille[3].nord = 5;
+    grille[2].ouest = 1;
+    grille[3].nord = 8;
     grille[3].est = 4;
-    grille[3].sud = 0;
+    grille[3].sud = -1;
     grille[3].ouest = 2;
-    grille[4].nord = 6;
+    grille[4].nord = 9;
     grille[4].est = -1;
-    grille[4].sud = 1;
+    grille[4].sud = -1;
     grille[4].ouest = 3;
-    grille[5].nord = 8;
+    grille[5].nord = 10;
     grille[5].est = 6;
-    grille[5].sud = 3;
+    grille[5].sud = 0;
     grille[5].ouest = -1;
-    grille[6].nord = 9;
-    grille[6].est = -1;
-    grille[6].sud = 4;
+    grille[6].nord = 11;
+    grille[6].est = 7;
+    grille[6].sud = 1;
     grille[6].ouest = 5;
-    grille[7].nord = -1;
+    grille[7].nord = 12;
     grille[7].est = 8;
     grille[7].sud = 2;
-    grille[7].ouest = -1;
-    grille[8].nord = -1;
+    grille[7].ouest = 6;
+    grille[8].nord = 13;
     grille[8].est = 9;
-    grille[8].sud = 5;
+    grille[8].sud = 3;
     grille[8].ouest = 7;
-    grille[9].nord = 12;
-    grille[9].est = 10;
-    grille[9].sud = 6;
+    grille[9].nord = 14;
+    grille[9].est = -1;
+    grille[9].sud = 4;
     grille[9].ouest = 8;
-    grille[10].nord = 13;
+    grille[10].nord = 15;
     grille[10].est = 11;
-    grille[10].sud = -1;
-    grille[10].ouest = 9;
-    grille[11].nord = 14;
-    grille[11].est = -1;
-    grille[11].sud = -1;
+    grille[10].sud = 5;
+    grille[10].ouest = -1;
+    grille[11].nord = 16;
+    grille[11].est = 12;
+    grille[11].sud = 6;
     grille[11].ouest = 10;
-    grille[12].nord = 16;
+    grille[12].nord = 17;
     grille[12].est = 13;
-    grille[12].sud = 9;
-    grille[12].ouest = -1;
-    grille[13].nord = -1;
+    grille[12].sud = 7;
+    grille[12].ouest = 11;
+    grille[13].nord = 18;
     grille[13].est = 14;
-    grille[13].sud = 10;
+    grille[13].sud = 8;
     grille[13].ouest = 12;
-    grille[14].nord = -1;
-    grille[14].est = 15;
-    grille[14].sud = 11;
+    grille[14].nord = 19;
+    grille[14].est = -1;
+    grille[14].sud = 9;
     grille[14].ouest = 13;
-    grille[15].nord = -1;
-    grille[15].est = -1;
-    grille[15].sud = -1;
-    grille[15].ouest = 14;
-    grille[16].nord = -1;
-    grille[16].est = -1;
-    grille[16].sud = 12;
-    grille[16].ouest = -1;
-    grille[17].nord = 1;
-    grille[17].est = -1;
-    grille[17].sud = -1;
-    grille[17].ouest = -1;
-    grille[18].nord = -1;
-    grille[18].est = -1;
-    grille[18].sud = -1;
-    grille[18].ouest = -1;
-    grille[19].nord = -1;
+    grille[15].nord = 20;
+    grille[15].est = 16;
+    grille[15].sud = 10;
+    grille[15].ouest = -1;
+    grille[16].nord = 21;
+    grille[16].est = 17;
+    grille[16].sud = 11;
+    grille[16].ouest = 15;
+    grille[17].nord = 22;
+    grille[17].est = 18;
+    grille[17].sud = 12;
+    grille[17].ouest = 16;
+    grille[18].nord = 23;
+    grille[18].est = 19;
+    grille[18].sud = 13;
+    grille[18].ouest = 17;
+    grille[19].nord = 24;
     grille[19].est = -1;
-    grille[19].sud = -1;
-    grille[19].ouest = -1;
+    grille[19].sud = 14;
+    grille[19].ouest = 18;
+    grille[20].nord = 25;
+    grille[20].est = 21;
+    grille[20].sud = 15;
+    grille[20].ouest = -1;
+    grille[21].nord = 26;
+    grille[21].est = 22;
+    grille[21].sud = 16;
+    grille[21].ouest = 20;
+    grille[22].nord = 27;
+    grille[22].est = 23;
+    grille[22].sud = 17;
+    grille[22].ouest = 21;
+    grille[23].nord = 28;
+    grille[23].est = 24;
+    grille[23].sud = 18;
+    grille[23].ouest = 22;
+    grille[24].nord = 29;
+    grille[24].est = -1;
+    grille[24].sud = 19;
+    grille[24].ouest = 23;
+    grille[25].nord = -1;
+    grille[25].est = 26;
+    grille[25].sud = 20;
+    grille[25].ouest = -1;
+    grille[26].nord = -1;
+    grille[26].est = 27;
+    grille[26].sud = 21;
+    grille[26].ouest = 25;
+    grille[27].nord = -1;
+    grille[27].est = 28;
+    grille[27].sud = 22;
+    grille[27].ouest = 26;
+    grille[28].nord = -1;
+    grille[28].est = 29;
+    grille[28].sud = 23;
+    grille[28].ouest = 27;
+    grille[29].nord = -1;
+    grille[29].est = -1;
+    grille[29].sud = 24;
+    grille[29].ouest = 28;
 
-
-    for (int i=0; i < 20; i++) 
+    printf("grille\n");
+    for (int i=0; i < 30; i++) 
     {
-        for (int j=0; j < 20; j++)
+        for (int j=0; j < 30; j++)
         {
             if(grille[j].nord != -1)
             {
@@ -724,7 +771,7 @@ int calculer_chemin(short int start, short int end)
             }
         }
     }
-
+    printf("points\n");
 
     while(chemin[c] != start)
     {
@@ -733,7 +780,7 @@ int calculer_chemin(short int start, short int end)
         c = c-1;
     }
 
-    for (int i=c; i < 19; i++) 
+    for (int i=c; i < 29; i++) 
     {
         if(grille[chemin[i]].nord == chemin[i+1])
         {
@@ -751,7 +798,9 @@ int calculer_chemin(short int start, short int end)
         {
             chemin[i] = 4;
         }
+        printf("%d\n",chemin[i]);
     }
+    printf("directions\n");
 }
 
 int main() {
@@ -788,8 +837,12 @@ int main() {
 
     // calcul chemin
     
+    printf("initialisation finie\n");
+
     short int start = checkpoint[d];
     short int end = checkpoint[d+1];
+
+
 
     short int c = calculer_chemin(start,end);
 	// main loop
@@ -824,7 +877,7 @@ int main() {
                 //cas D0: le véhicule est "aligné" avec la ligne
                 case OUT :
 					printf("CASE OUT");
-                    if (vc[3] > SEUIL_NOIR || vc[4] > SEUIL_NOIR ){
+                    if  ((vc[3] > SEUIL_NOIR || vc[4] > SEUIL_NOIR) && vc[0] < SEUIL_BLANC && vc[7] < SEUIL_BLANC ){
                         etat = LINE;
 						PAvant = 0;
 						I = 0;
