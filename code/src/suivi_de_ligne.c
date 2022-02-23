@@ -68,11 +68,22 @@ volatile int d = 0;
 volatile short int demitour = 0;
 
 
-volatile enum{ N, E, S ,O} direction = O; // position de depart
-#define TAILLE_GRILLE 30 // <= 32
-#define CHEMIN_MAX 10
+// Variable du chemin
+
+volatile enum{ N, E, S ,O} direction = O; // direction de depart
+#define TAILLE_GRILLE 30 // <= 32 ; Nombre de points de la grille, inférieur ou égale à 32
+#define CHEMIN_MAX 10    // Nombre de points du chemin, inférieur ou égale à 32,
+//tableau contenant une suite de direction 
+//Il sert à guider le véhicule entre 2 points clés du chemin
 volatile short int chemin[TAILLE_GRILLE];
+// Points clés du chemin
+// le vehicule s'arrètera au dernier point du tableau ou à la première occurence de -1
+// le premier point du tableau est le premier point rencontré
+// attention à bien orienté le véhicule
 volatile short int checkpoint[CHEMIN_MAX] = {12 , 10  , 0 , 4 , 29 , 25 , 10 , 14 , 13 , -1};
+// largage de caisse
+// le vehicule activera le servo-moteur quand il y a une valeur differente de 0
+// le premier point de TAB_SM correspond au premier point de checkpoint
 volatile short int TAB_SM[CHEMIN_MAX] =     {0 ,  0  , 1  ,  0 , 1 , 0  , 0  , 0  , 0 , 0 };
 
 
@@ -82,15 +93,24 @@ volatile short int TAB_SM[CHEMIN_MAX] =     {0 ,  0  , 1  ,  0 , 1 , 0  , 0  , 0
 // passer la ligne en inpout -> la tension de la ligne va diminuer jusqu'a etre nulle 
 // calculer le temps de descente a 0
 
+// structure de représentation des points
+// chaque point est représenté par ces voisins orientés
 struct croisement
 {
-    int nord;
-    int est;
-    int ouest;
-    int sud;
+    int nord; //point au nord du sommet
+    int est; //point à l'est du sommet
+    int ouest; //point à l'ouest du sommet
+    int sud; //point au sud du sommet
 };
 typedef struct croisement croisement;
 
+
+//fonction d'analyse du retour capteur
+// retourne une valeur entre -7 et +7 pour le PID afin de corriger le décalage par rapport à la ligne
+// retourne 10 en cas de sortie de route
+// retourne 11 en cas de croisement en T
+// retourne 12 en cas de virage à gauche
+// retourne 13 en cas de virage à droite
 int get_error(short int * array){
 
 	unsigned char TB = 0b00000000;
@@ -219,7 +239,8 @@ void init(){
 
 }
 
-
+// fonction de charge des capteurs
+// Fait passer toutes les lignes des capteurs en OUT et PULL UP
 void CHARGE()
 {
 	for (short int i=0; i < 4; i++)                              
@@ -234,6 +255,8 @@ void CHARGE()
 	}
 }
 
+// fonction de charge des capteurs
+// Fait passer toutes les lignes des capteurs en IN et PULL UP
 
 void CAPTURE_START()
 {
@@ -338,6 +361,7 @@ void inverseMG(){
     }
 }
 
+//Actualise la vitesse des moteurs en fonction du PID
 void VITESSE_PID()
 {
 	printf("In PID\n");
@@ -352,6 +376,8 @@ void VITESSE_PID()
 	printf("Vitesse M1: %d, Vitesse M2 %d\n", puiss_MD, puiss_MG);
 }
 
+//Diminue légèrement la vitesse des moteurs
+//Comme la fonction est appelée à chaque cycle, cela permet un arret doux du véhicule
 void SMOOTHSTOP()
 {
 	if(puiss_MD >= 25)
@@ -384,6 +410,12 @@ void SMOOTHSTOP()
 
 int calculer_chemin(short int start, short int end);
 
+
+//calcule la prochaine direction à prendre et place le véhicule dans l'état qui correspond à la transition vers cette direction (tourner à gauche, demi-tour...)
+//Si le véhicule est arrivé à un point clé du chemin, il appelle la fonction permettant de générer la suite de direction vers le point clé suivant
+//retourne la position dans le tableau de la prochaine direction à prendre
+//si le véhicule a terminé le chemin, il désactive les interruptions ce qui arrète le véhicule
+//La fonction gère aussi l'activation du servo-moteur à certains points clés déterminé dans le tableau TAB_SM
 int choix_direction(int x, short int* Tab)
 {
     if(x == TAILLE_GRILLE -1)
@@ -601,6 +633,11 @@ int choix_direction(int x, short int* Tab)
     return x+1;
 }
 
+
+//fonction du calcul de chemin
+//Elle génère une suite de direction entre les deux points en arguments et la stocke dans le tableau chamin
+//Elle retourne la position de la première direction dans chemin
+//La grille est entrée en dur dans le code, elle est généré à chaque fois que l'on en a besoin pour le calcul puis détruite pour ne pas emcombrer la mémoire 
 int calculer_chemin(short int start, short int end)
 {
     croisement grille[TAILLE_GRILLE];
@@ -809,6 +846,7 @@ int calculer_chemin(short int start, short int end)
         printf("%d\n",chemin[i]);
     }
     printf("directions\n");
+    return c;
 }
 
 
@@ -859,7 +897,7 @@ int main() {
 
 
 
-	// initialization
+	// initialisation
 	init();
     init_TIM4();
 	init_moteurs();
@@ -880,14 +918,12 @@ int main() {
         sens_MG = 1;
     }
 
-    // calcul chemin
+    // calcul chemin du premier trajet entre les deux premiers points clés
     
     printf("initialisation finie\n");
 
     short int start = checkpoint[d];
     short int end = checkpoint[d+1];
-
-
 
     short int c = calculer_chemin(start,end);
 	// main loop
@@ -901,6 +937,7 @@ int main() {
 	while(1) {
         if(TIM4_triggered){
 			TIM4_triggered = 0;
+            //charge les capteurs pendant un cycle puis regarde sur les 10 cycles suivants combien de temps les lignes mettent à se décharger
 			for (int i=0; i < 4; i++)                              
             {
                 if((vc[i] > x) & ((GPIOA_IDR & (1 << i ))== 0))
@@ -919,9 +956,10 @@ int main() {
                 printf("%d ; %d ; %d ; %d ; %d ; %d ; %d ; %d\n",vc[0],vc[1],vc[2],vc[3],vc[4],vc[5],vc[6],vc[7]);
                 CHARGE();
                 switch(etat){
-                //cas D0: le véhicule est "aligné" avec la ligne
+                // cas sortie de route
                 case OUT :
 					printf("CASE OUT");
+                    // passage en suivi de ligne si le véhicule détecte une ligne
                     if  ((vc[3] > SEUIL_NOIR || vc[4] > SEUIL_NOIR) && vc[0] < SEUIL_BLANC && vc[7] < SEUIL_BLANC ){
                         etat = LINE;
 						PAvant = 0;
@@ -931,27 +969,32 @@ int main() {
                     stop_MD();
                     stop_MG();
                     break;
+                // cas suivi de ligne
                 case LINE:
 					printf("CASE LINE");
                     error = get_error(vc);
                     switch(error){
+                        // passage en sortie de route
                         case 10:
                             etat = OUT;
                             stop_MD();
                             stop_MG();
                             break;
+                        // passage en intersection en T
                         case 11:
                             etat = INTERSECTION;
                             type = T;
                             stop_MD();
                             stop_MG();
                             break;
+                        // passage en intersection en L à gauche
                         case 12:
                             etat = INTERSECTION;
                             type = LL;
                             stop_MD();
                             stop_MG();
                             break;
+                        // passage en intersection en L à droite
                         case 13:
                             etat = INTERSECTION;
                             type = LR;
@@ -969,85 +1012,102 @@ int main() {
                             break;
                     }
                     break;
+                // cas intersection
                 case INTERSECTION:
                     printf("CASE INTERSECTION\n");
                     
                     switch(type){
+                        // sous cas intersection en T
                         case T:
                             printf("CASE T\n");
                             SMOOTHSTOP();
+                            // passage en intersection en X
                             if(vc[7] < SEUIL_BLANC && vc[0] < SEUIL_BLANC && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC))
                             {
                                 type = X;
                                 //printf("CX\n");
                             }
+                            // quand le véhicule est arrété, appelle la fonction de choix de direction
                             if( puiss_MD == 0 && puiss_MG == 0)
                             {
                                 c = choix_direction(c, chemin);
                             }
                             break;
+                        // sous cas intersection en L à gauche
                         case LL:
                             printf("CASE LL\n");
                             SMOOTHSTOP();
+                            // passage en intersection en T
                             if(vc[7] > SEUIL_NOIR && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC))
                             {
                                 type = T;
                                 //printf("CT\n");
                             }
-
+                            // passage en intersection en T à gauche
                             if(vc[0] < SEUIL_BLANC && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC))
                             {
                                 type = TL;
                                 //printf("CTL\n");
                             }
+                            // quand le véhicule est arrété, appelle la fonction de choix de direction
                             if( puiss_MD == 0 && puiss_MG == 0)
                             {
                                 c = choix_direction(c, chemin);
                             }
                             break;
+                        // sous cas intersection en L à droite
                         case LR:
                             printf("CASE LR\n");
                             SMOOTHSTOP();
+                            // passage en intersection en T
                             if(vc[0] > SEUIL_NOIR && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC))
                             {
                                 type = T;
                                 //printf("CT\n");
                             }
-
+                            // passage en intersection en T à droite
                             if(vc[7] < SEUIL_BLANC && (vc[3] > SEUIL_BLANC || vc[4] > SEUIL_BLANC))
                             {
                                 type = TR;
                                 //printf("CTR\n");
                             }
+                            // quand le véhicule est arrété, appelle la fonction de choix de direction
                             if( puiss_MD == 0 && puiss_MG == 0)
                             {
                                 c = choix_direction(c, chemin);
                             }
                             break;
+                        //sous cas intersection en X
                         case X:
                             printf("CASE X\n");
                             SMOOTHSTOP();
+                            // quand le véhicule est arrété, appelle la fonction de choix de direction
                             if( puiss_MD == 0 && puiss_MG == 0)
                             {
                                 c = choix_direction(c, chemin);
                             }
                             break;
+                        //sous cas intersection en T à gauche
                         case TL:
                             printf("CASE TL\n");
                             SMOOTHSTOP();
+                            // quand le véhicule est arrété, appelle la fonction de choix de direction
                             if( puiss_MD == 0 && puiss_MG == 0)
                             {
                                 c = choix_direction(c, chemin);
                             }
                             break;
+                        //sous cas intersection en T à droite
                         case TR:
                             printf("CASE TR\n");
                             SMOOTHSTOP();
+                            // quand le véhicule est arrété, appelle la fonction de choix de direction
                             if( puiss_MD == 0 && puiss_MG == 0)
                             {
                                 c = choix_direction(c, chemin);
                             }
                             break;
+                        //{TR1, TR2, TR3} suite d'étapes pour tourner à droite 
                         case TR1:
                             printf("CASE TR1\n");
                             inverseMD();
@@ -1083,6 +1143,7 @@ int main() {
                                 //printf("D0\n");
                             }
                             break;
+                        //{TL1, TL2, TL3} suite d'étapes pour tourner à gauche
                         case TL1:
                             printf("CASE TL1\n");
                             inverseMG();
